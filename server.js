@@ -34,15 +34,20 @@ const SSO_AI_PROMPT_ENDPOINT = `${SSO_BASE_URL}/api/v1/integrations/ai/prompt`;
 // Détection de proxy pour Coolify / Traefik
 app.set('trust proxy', true);
 
-// Redirection automatique vers HTTPS en production (évite le badge Non sécurisé)
+// Redirection automatique stricte vers HTTPS + HSTS (supprime le badge "Non sécurisé")
 app.use((req, res, next) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+
+  const protoHeader = req.headers['x-forwarded-proto'];
+  const isHttp = protoHeader === 'http' || (protoHeader && !protoHeader.includes('https')) || (!protoHeader && req.protocol === 'http');
+
   if (
-    process.env.NODE_ENV === 'production' &&
-    req.headers['x-forwarded-proto'] === 'http' &&
+    isHttp &&
     !req.path.startsWith('/health') &&
     !req.path.startsWith('/api/health')
   ) {
-    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    const host = req.headers.host || 'bot.oussamma.tn';
+    return res.redirect(301, `https://${host}${req.originalUrl || req.url}`);
   }
   next();
 });
@@ -489,7 +494,7 @@ app.post('/api/chat', async (req, res) => {
         const sessionExpiredMessage = 
           `### ⚠️ Votre session SSO a expiré\n\n` +
           `Votre jeton d'authentification central a expiré ou le serveur SSO a été mis à jour.\n\n` +
-          `👉 [**Cliquez ici pour vous reconnecter au SSO (1 clic)**](/auth/login)\n\n` +
+          `👉 [**Cliquez ici pour vous reconnecter au SSO en HTTPS (1 clic)**](https://bot.oussamma.tn/auth/login)\n\n` +
           `Une fois reconnecté, vos discussions reprendront immédiatement !`;
 
         sendSSE('token', { token: sessionExpiredMessage });
