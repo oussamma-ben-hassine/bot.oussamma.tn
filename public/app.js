@@ -74,6 +74,20 @@ async function initApp() {
   } else {
     createNewConversation();
   }
+
+  // Si on revient d'une reconnexion réussie, purger l'ancien message d'erreur
+  if (window.location.search.includes('reconnected=1')) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    const currentChat = getCurrentConversation();
+    if (currentChat && currentChat.messages && currentChat.messages.length > 0) {
+      const lastMsg = currentChat.messages[currentChat.messages.length - 1];
+      if (lastMsg.role === 'assistant' && (lastMsg.content.includes('Session SSO expirée') || lastMsg.content.includes('session SSO a expiré'))) {
+        currentChat.messages.pop();
+        saveConversations();
+        renderMessages();
+      }
+    }
+  }
 }
 
 // -------------------------------------------------------------

@@ -234,7 +234,7 @@ app.get('/auth/callback', async (req, res) => {
     delete req.session.oauth_state;
 
     // Redirection vers l'application principale protégée
-    res.redirect('/');
+    res.redirect('/?reconnected=1');
   } catch (err) {
     console.error('Erreur callback SSO:', err);
     res.status(500).send('Erreur interne lors de la finalisation de la connexion SSO.');
@@ -491,10 +491,20 @@ app.post('/api/chat', async (req, res) => {
 
       if (aiResponse.status === 401) {
         req.session = null;
+        let ssoDetail = '';
+        try {
+          const errJson = await aiResponse.clone().json();
+          ssoDetail = errJson.detail || JSON.stringify(errJson);
+        } catch (e) {
+          ssoDetail = await aiResponse.clone().text().catch(() => '');
+        }
+        console.error('SSO 401 detail:', ssoDetail);
+
         const sessionExpiredMessage = 
           `### ⚠️ Session SSO expirée\n\n` +
-          `Votre jeton de connexion a expiré suite à la mise à jour du SSO.\n\n` +
-          `<a href="https://bot.oussamma.tn/auth/login" style="display:inline-block;padding:10px 20px;margin:8px 0;background:#2563eb;color:#ffffff;border-radius:12px;font-weight:600;text-decoration:none;box-shadow:0 2px 8px rgba(37,99,235,0.3);">🔑 Cliquez ici pour vous reconnecter au SSO (1 clic)</a>\n\n` +
+          `Votre jeton de connexion a expiré suite à la mise à jour du SSO.` +
+          (ssoDetail ? `\n\n> *Message du SSO : ${ssoDetail}*` : '') +
+          `\n\n<a href="https://bot.oussamma.tn/auth/login" style="display:inline-block;padding:10px 20px;margin:8px 0;background:#2563eb;color:#ffffff;border-radius:12px;font-weight:600;text-decoration:none;box-shadow:0 2px 8px rgba(37,99,235,0.3);">🔑 Cliquez ici pour vous reconnecter au SSO (1 clic)</a>\n\n` +
           `Une fois reconnecté, vous pourrez reprendre vos discussions avec l'IA directement !`;
 
         sendSSE('token', { token: sessionExpiredMessage });
