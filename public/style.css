@@ -1,8 +1,8 @@
 /* ============================================================
-   THÈME CHATGPT / GEMINI / OPEN WEBUI - bot.oussamma.tn
+   THÈME CLAIR ÉPURÉ & DYNAMISME IA - bot.oussamma.tn
    ============================================================ */
 
-/* Scrollbars discrètes */
+/* Scrollbars modernes et discrètes */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -13,17 +13,17 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(148, 163, 184, 0.25);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(148, 163, 184, 0.45);
 }
 
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -32,20 +32,106 @@
   padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
 }
 
-/* Animations d'apparition */
+/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Bulle Utilisateur Style ChatGPT Responsive */
+/* Orbe IA Vivant (Halo lumineux iridescent) */
+.ai-orb-glow {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+  filter: blur(22px);
+  opacity: 0.7;
+  animation: orbPulse 3s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes orbPulse {
+  0%, 100% {
+    transform: scale(0.95);
+    opacity: 0.55;
+    filter: blur(18px);
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.85;
+    filter: blur(26px);
+  }
+}
+
+/* Avatar IA Réactif pendant la génération */
+.ai-thinking-avatar {
+  position: relative;
+}
+
+.ai-thinking-avatar::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #3b82f6, #a855f7, #06b6d4);
+  animation: spinGlow 2s linear infinite;
+  z-index: -1;
+}
+
+@keyframes spinGlow {
+  0% { transform: rotate(0deg); opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { transform: rotate(360deg); opacity: 0.7; }
+}
+
+/* Boîte de Réflexion Dynamique ("Thinking Process") */
+.thinking-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+  padding: 0.65rem 0.9rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.775rem;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.dark .thinking-box {
+  background: #202020;
+  border-color: #333333;
+  color: #9ca3af;
+}
+
+.thinking-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.thinking-steps {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #e2e8f0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.725rem;
+  line-height: 1.5;
+}
+
+.dark .thinking-steps {
+  border-color: #333333;
+}
+
+/* Bulle Utilisateur sur Fond Blanc */
 .user-bubble {
-  background-color: #2f2f2f;
-  color: #ececec;
+  background-color: #f1f5f9;
+  color: #0f172a;
   border-radius: 1.25rem;
   padding: 0.65rem 1rem;
   max-width: 88%;
@@ -53,6 +139,13 @@
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+  border: 1px solid #e2e8f0;
+}
+
+.dark .user-bubble {
+  background-color: #272727;
+  color: #f1f5f9;
+  border-color: #383838;
 }
 
 @media (min-width: 640px) {
@@ -63,18 +156,26 @@
   }
 }
 
-/* Message Assistant Style ChatGPT / Gemini */
+/* Message Assistant */
 .assistant-message {
-  color: #ececec;
+  color: #1e293b;
   font-size: 0.9375rem;
   line-height: 1.7;
 }
 
-/* Rendu Typographique Markdown façon ChatGPT */
-.markdown-body {
+.dark .assistant-message {
   color: #ececec;
+}
+
+/* Typographie Markdown */
+.markdown-body {
+  color: #1e293b;
   font-size: 0.9375rem;
   line-height: 1.7;
+}
+
+.dark .markdown-body {
+  color: #ececec;
 }
 
 .markdown-body p {
@@ -89,10 +190,17 @@
 .markdown-body h2,
 .markdown-body h3,
 .markdown-body h4 {
-  font-weight: 600;
-  color: #ffffff;
+  font-weight: 700;
+  color: #0f172a;
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;
+}
+
+.dark .markdown-body h1,
+.dark .markdown-body h2,
+.dark .markdown-body h3,
+.dark .markdown-body h4 {
+  color: #ffffff;
 }
 
 .markdown-body h1 { font-size: 1.35rem; }
@@ -117,52 +225,79 @@
   margin-bottom: 0.35rem;
 }
 
-/* Inline Code */
+/* Code Inline */
 .markdown-body :not(pre) > code {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #e5e5e5;
+  background-color: #f1f5f9;
+  color: #2563eb;
   padding: 0.15rem 0.35rem;
   border-radius: 0.375rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.85em;
+  border: 1px solid #e2e8f0;
 }
 
-/* Blocs de Code Style ChatGPT avec Header */
+.dark .markdown-body :not(pre) > code {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #93c5fd;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Blocs de Code avec Header Style Professionnel */
 .code-block-wrapper {
-  background-color: #0d0d0d;
-  border: 1px solid #2d2d2d;
-  border-radius: 0.625rem;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
   margin: 1rem 0;
   overflow: hidden;
+}
+
+.dark .code-block-wrapper {
+  background-color: #121212;
+  border-color: #2e2e2e;
 }
 
 .code-block-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #171717;
+  background-color: #f1f5f9;
   padding: 0.5rem 1rem;
   font-size: 0.75rem;
-  color: #a3a3a3;
+  color: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  border-bottom: 1px solid #262626;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dark .code-block-header {
+  background-color: #1a1a1a;
+  color: #9ca3af;
+  border-color: #262626;
 }
 
 .code-copy-btn {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  color: #a3a3a3;
+  color: #64748b;
   background: transparent;
   border: none;
   font-size: 0.75rem;
   cursor: pointer;
   padding: 0.2rem 0.5rem;
-  border-radius: 0.25rem;
+  border-radius: 0.375rem;
   transition: all 0.15s ease;
 }
 
+.dark .code-copy-btn {
+  color: #9ca3af;
+}
+
 .code-copy-btn:hover {
+  color: #0f172a;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark .code-copy-btn:hover {
   color: #ffffff;
   background-color: rgba(255, 255, 255, 0.08);
 }
@@ -170,14 +305,18 @@
 .markdown-body pre {
   margin: 0 !important;
   padding: 1rem !important;
-  background-color: #0d0d0d !important;
+  background-color: #f8fafc !important;
   border: none !important;
   overflow-x: auto;
 }
 
+.dark .markdown-body pre {
+  background-color: #121212 !important;
+}
+
 .markdown-body pre code {
   background: transparent !important;
-  color: #e5e5e5 !important;
+  color: #0f172a !important;
   padding: 0 !important;
   border: none !important;
   font-size: 0.825rem;
@@ -185,12 +324,21 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-/* Citations & Blockquotes */
+.dark .markdown-body pre code {
+  color: #e5e5e5 !important;
+}
+
+/* Citations */
 .markdown-body blockquote {
-  border-left: 3px solid #10a37f;
+  border-left: 3px solid #3b82f6;
   padding-left: 0.85rem;
-  color: #a3a3a3;
+  color: #64748b;
   margin: 0.85rem 0;
+  font-style: italic;
+}
+
+.dark .markdown-body blockquote {
+  color: #9ca3af;
 }
 
 /* Tableaux */
@@ -203,44 +351,47 @@
 
 .markdown-body th,
 .markdown-body td {
-  border: 1px solid #333333;
+  border: 1px solid #e2e8f0;
   padding: 0.5rem 0.75rem;
   text-align: left;
 }
 
+.dark .markdown-body th,
+.dark .markdown-body td {
+  border-color: #333333;
+}
+
 .markdown-body th {
-  background: #2a2a2a;
+  background: #f1f5f9;
   font-weight: 600;
+  color: #0f172a;
+}
+
+.dark .markdown-body th {
+  background: #262626;
   color: #ffffff;
 }
 
 .markdown-body tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.dark .markdown-body tr:nth-child(even) {
   background: rgba(255, 255, 255, 0.02);
 }
 
-/* Liens */
-.markdown-body a {
-  color: #3b82f6;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.markdown-body a:hover {
-  color: #60a5fa;
-}
-
-/* Curseur de streaming */
+/* Curseur Dynamique pendant la Réponse */
 .streaming-cursor::after {
-  content: '●';
+  content: '▋';
   display: inline-block;
-  color: #10a37f;
-  animation: pulse 1s infinite;
-  margin-left: 4px;
-  font-size: 0.75rem;
+  color: #3b82f6;
+  animation: cursorBlink 0.8s infinite;
+  margin-left: 3px;
+  font-size: 0.85em;
   vertical-align: middle;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.3; transform: scale(0.8); }
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
