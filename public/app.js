@@ -151,12 +151,13 @@ function saveConversations() {
   localStorage.setItem('bot_oussamma_chats', JSON.stringify(state.conversations));
 }
 
-// -------------------------------------------------------------
-// AUTHENTIFICATION SSO
-// -------------------------------------------------------------
 async function checkAuthStatus() {
   try {
     const res = await fetch('/api/auth/me');
+    if (res.status === 401) {
+      window.location.href = '/auth/login';
+      return;
+    }
     const data = await res.json();
     if (data.authenticated && data.user) {
       state.user = data.user;
@@ -174,12 +175,7 @@ async function checkAuthStatus() {
       DOM.authBtn.innerHTML = `<i data-lucide="log-out" class="w-4 h-4 text-slate-400 hover:text-red-500"></i>`;
       DOM.authBtn.onclick = () => window.location.href = '/auth/logout';
     } else {
-      DOM.userName.textContent = 'Invité';
-      DOM.userStatus.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span> Non connecté`;
-      DOM.userAvatar.textContent = '?';
-      DOM.authBtn.title = 'Connexion SSO';
-      DOM.authBtn.innerHTML = `<i data-lucide="log-in" class="w-4 h-4 text-blue-600"></i>`;
-      DOM.authBtn.onclick = () => window.location.href = '/auth/login';
+      window.location.href = '/auth/login';
     }
     lucide.createIcons();
   } catch (e) {
@@ -501,6 +497,11 @@ async function handleSendMessage() {
         systemPrompt: state.config.systemPrompt
       })
     });
+
+    if (response.status === 401) {
+      window.location.href = '/auth/login';
+      return;
+    }
 
     if (!response.ok) throw new Error(`Erreur HTTP ${response.status}`);
 
