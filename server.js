@@ -380,48 +380,59 @@ app.post('/api/chat', async (req, res) => {
 
   // 2. Routage vers le Provider IA adéquat
   try {
-    // Mode A: Provider SSO AI
+    // Mode A: Provider SSO AI (Intégration directe avec l'IA configurée dans votre SSO)
     if (model === 'sso' || !customConfig.provider || customConfig.provider === 'sso') {
-      const ssoEndpoint = customConfig.ssoEndpoint || SSO_AI_ENDPOINT;
+      const ssoEndpoint = customConfig.ssoEndpoint || process.env.SSO_AI_ENDPOINT || `${SSO_BASE_URL}/api/v1/integrations/ai/prompt`;
       const ssoToken = req.session?.access_token || SSO_CLIENT_SECRET;
+      const userPrompt = fullMessages.map(m => `${m.role === 'user' ? 'Utilisateur' : m.role === 'system' ? 'Système' : 'Assistant'}: ${m.content}`).join('\n\n');
 
       try {
-        const aiResponse = await fetch(`${ssoEndpoint}/chat/completions`, {
+        // 1. Appel principal vers l'endpoint IA officiel du SSO (/api/v1/integrations/ai/prompt)
+        const promptRes = await fetch(ssoEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${ssoToken}`
           },
           body: JSON.stringify({
-            model: customConfig.model || SSO_AI_DEFAULT_MODEL,
-            messages: fullMessages,
-            stream: true,
-            temperature: 0.7
+            provider: customConfig.providerId || process.env.SSO_AI_PROVIDER || 'openai_codex',
+            model: customConfig.model || process.env.SSO_AI_DEFAULT_MODEL || 'gpt-4o',
+            prompt: userPrompt
           })
         });
 
-        if (aiResponse.ok && aiResponse.body) {
-          // Lecture du stream OpenAI-compatible
-          const reader = aiResponse.body.getReader ? aiResponse.body.getReader() : null;
-          if (reader) {
-            const decoder = new TextDecoder();
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              const chunk = decoder.decode(value);
-              const lines = chunk.split('\n');
-              for (const line of lines) {
-                if (line.startsWith('data: ') && line.trim() !== 'data: [DONE]') {
-                  try {
-                    const parsed = JSON.parse(line.replace('data: ', ''));
-                    const content = parsed.choices?.[0]?.delta?.content || '';
-                    if (content) sendSSE('token', { token: content });
-                  } catch (e) {}
-                }
-              }
+        if (promptRes.ok) {
+          const promptData = await promptRes.json();
+          const responseText = promptData.response || promptData.content || promptData.text || '';
+          
+          if (responseText) {
+            // Streaming fluide des tokens vers le client
+            const chunks = responseText.split(/(\s+)/);
+            for (const chunk of chunks) {
+              sendSSE('token', { token: chunk });
+              await new Promise(r => setTimeout(r, 15));
             }
-          } else {
-            // Lecture classique via stream Node
+            sendSSE('done', {});
+            return res.end();
+          }
+        } else {
+          // 2. Si le endpoint prompt retourne une erreur, tester si un endpoint OpenAI stream existe
+          const completionsUrl = ssoEndpoint.replace('/prompt', '/chat/completions');
+          const aiResponse = await fetch(completionsUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${ssoToken}`
+            },
+            body: JSON.stringify({
+              model: customConfig.model || process.env.SSO_AI_DEFAULT_MODEL || 'gpt-4o',
+              messages: fullMessages,
+              stream: true,
+              temperature: 0.7
+            })
+          });
+
+          if (aiResponse.ok && aiResponse.body) {
             for await (const chunk of aiResponse.body) {
               const text = chunk.toString();
               const lines = text.split('\n');
@@ -435,12 +446,12 @@ app.post('/api/chat', async (req, res) => {
                 }
               }
             }
+            sendSSE('done', {});
+            return res.end();
           }
-          sendSSE('done', {});
-          return res.end();
         }
       } catch (ssoErr) {
-        console.warn('Endpoint SSO non joignable ou sans proxy OpenAI direct:', ssoErr.message);
+        console.warn('Endpoint SSO AI temporairement indisponible:', ssoErr.message);
       }
     }
 
