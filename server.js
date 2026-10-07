@@ -460,7 +460,7 @@ app.post('/api/chat', async (req, res) => {
       },
       body: JSON.stringify({
         provider: providerName,
-        model: model || 'gpt-4o',
+        model: /^(gpt|o\d|chatgpt)/i.test(model || '') ? model : 'gpt-4o',
         prompt: fullPrompt,
       }),
     });
