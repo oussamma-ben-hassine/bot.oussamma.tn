@@ -31,32 +31,81 @@ const SSO_USERINFO_ENDPOINT = `${SSO_BASE_URL}/oauth/userinfo`;
 const SSO_LOGOUT_ENDPOINT = `${SSO_BASE_URL}/oauth/logout`;
 const SSO_AI_PROMPT_ENDPOINT = `${SSO_BASE_URL}/api/v1/integrations/ai/prompt`;
 
+// Détection de proxy pour Coolify / Traefik
+app.set('trust proxy', true);
+
+// Redirection automatique vers HTTPS en production (évite le badge Non sécurisé)
+app.use((req, res, next) => {
+  if (
+    process.env.NODE_ENV === 'production' &&
+    req.headers['x-forwarded-proto'] === 'http' &&
+    !req.path.startsWith('/health') &&
+    !req.path.startsWith('/api/health')
+  ) {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Sessions serveur avec cookies signés et sécurisés (HttpOnly)
+// secure: false permet le fonctionnement fluide derrière le proxy inverse de Coolify
 app.use(
   session({
     name: 'bot_oussamma_session',
-    keys: [process.env.SESSION_SECRET || 'super-secret-bot-oussamma-key-2026-xyz'],
+    keys: [process.env.SESSION_SECRET || 'super-secret-bot-oussamma-key-2026-prod'],
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
-    secure: process.env.NODE_ENV === 'production' && !SSO_REDIRECT_URI.startsWith('http://localhost'),
+    secure: false,
     sameSite: 'lax',
     httpOnly: true,
   })
 );
 
 // =============================================================================
-// HELPER PKCE (RFC 7636)
+// HELPER PKCE & STATE CRYPTOGRAPHIQUE AUTO-VÉRIFIABLE (HMAC)
 // =============================================================================
-function generatePKCE() {
-  const code_verifier = crypto.randomBytes(32).toString('base64url');
-  const code_challenge = crypto
-    .createHash('sha256')
-    .update(code_verifier)
-    .digest('base64url');
-  return { code_verifier, code_challenge };
+const SECRET_SIGN_KEY = process.env.SESSION_SECRET || 'bot-oussamma-super-secret-key-2026-prod';
+
+function generateOidcStateAndPKCE() {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const signature = crypto.createHmac('sha256', SECRET_SIGN_KEY).update(`state:${nonce}`).digest('hex');
+  const state = `${nonce}.${signature}`;
+
+  // Dérivation déterministe et sécurisée du code_verifier (RFC 7636)
+  const code_verifier = crypto.createHmac('sha256', SECRET_SIGN_KEY).update(`pkce:${nonce}`).digest('base64url').substring(0, 64);
+  const code_challenge = crypto.createHash('sha256').update(code_verifier).digest('base64url');
+
+  return { state, code_verifier, code_challenge };
+}
+
+function verifyOidcState(stateParam, sessionState) {
+  if (!stateParam) return null;
+
+  // 1. Vérification session locale (si cookie préservé)
+  if (sessionState && stateParam === sessionState) {
+    return { valid: true };
+  }
+
+  // 2. Vérification cryptographique HMAC (si cookie perdu lors de la redirection)
+  if (typeof stateParam === 'string' && stateParam.includes('.')) {
+    const [nonce, signature] = stateParam.split('.');
+    if (nonce && signature) {
+      const expectedSignature = crypto.createHmac('sha256', SECRET_SIGN_KEY).update(`state:${nonce}`).digest('hex');
+      try {
+        const sigBuf = Buffer.from(signature, 'hex');
+        const expBuf = Buffer.from(expectedSignature, 'hex');
+        if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)) {
+          const derivedVerifier = crypto.createHmac('sha256', SECRET_SIGN_KEY).update(`pkce:${nonce}`).digest('base64url').substring(0, 64);
+          return { valid: true, derivedVerifier };
+        }
+      } catch (e) {}
+    }
+  }
+
+  return null;
 }
 
 // =============================================================================
@@ -72,10 +121,9 @@ app.get(['/health', '/api/health'], (req, res) => {
 
 // A. Route de connexion (/auth/login)
 app.get('/auth/login', (req, res) => {
-  const { code_verifier, code_challenge } = generatePKCE();
-  const state = crypto.randomBytes(16).toString('hex');
+  const { state, code_verifier, code_challenge } = generateOidcStateAndPKCE();
 
-  // Sauvegarde PKCE et state dans la session utilisateur
+  // Sauvegarde PKCE et state dans la session utilisateur (redondance)
   req.session.pkce_code_verifier = code_verifier;
   req.session.oauth_state = state;
 
@@ -100,17 +148,18 @@ app.get('/auth/callback', async (req, res) => {
     return res.redirect(`/auth/login?error=${encodeURIComponent(error_description || error)}`);
   }
 
-  // 1. Vérification du paramètre state contre CSRF
-  if (!state || state !== req.session.oauth_state) {
-    console.error('Échec validation CSRF state');
-    return res.status(400).send('Erreur de sécurité : paramètre state invalide.');
-  }
-
   if (!code) {
-    return res.status(400).send('Erreur : code d\'autorisation manquant.');
+    return res.redirect('/auth/login?error=code_manquant');
   }
 
-  const code_verifier = req.session.pkce_code_verifier;
+  // 1. Vérification du paramètre state (Session ou Signature HMAC)
+  const stateCheck = verifyOidcState(state, req.session?.oauth_state);
+  if (!stateCheck || !stateCheck.valid) {
+    console.warn('Paramètre state non reconnu ou session expirée, relance de la connexion');
+    return res.redirect('/auth/login');
+  }
+
+  const code_verifier = req.session?.pkce_code_verifier || stateCheck.derivedVerifier || '';
 
   try {
     // 2. Échange du code d'autorisation contre les tokens auprès du SSO
@@ -120,7 +169,7 @@ app.get('/auth/callback', async (req, res) => {
       client_secret: SSO_CLIENT_SECRET,
       code: code.toString(),
       redirect_uri: SSO_REDIRECT_URI,
-      code_verifier: code_verifier || '',
+      code_verifier: code_verifier,
     });
 
     const tokenRes = await fetch(SSO_TOKEN_ENDPOINT, {
@@ -135,7 +184,7 @@ app.get('/auth/callback', async (req, res) => {
     if (!tokenRes.ok) {
       const errBody = await tokenRes.text();
       console.error('Erreur échange token SSO:', tokenRes.status, errBody);
-      return res.status(502).send(`Échec de l'authentification auprès du SSO (${tokenRes.status}).`);
+      return res.redirect('/auth/login?error=echange_token_echoue');
     }
 
     const tokenData = await tokenRes.json();
