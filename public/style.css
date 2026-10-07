@@ -24,6 +24,12 @@
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Support Safe Area pour écrans mobiles (iPhone, Android) */
+.safe-bottom {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* Animations d'apparition */
@@ -36,17 +42,25 @@
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Bulle Utilisateur Style ChatGPT */
+/* Bulle Utilisateur Style ChatGPT Responsive */
 .user-bubble {
   background-color: #2f2f2f;
   color: #ececec;
-  border-radius: 1.5rem;
-  padding: 0.75rem 1.15rem;
-  max-width: 80%;
+  border-radius: 1.25rem;
+  padding: 0.65rem 1rem;
+  max-width: 88%;
   font-size: 0.9375rem;
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+@media (min-width: 640px) {
+  .user-bubble {
+    border-radius: 1.5rem;
+    padding: 0.75rem 1.15rem;
+    max-width: 80%;
+  }
 }
 
 /* Message Assistant Style ChatGPT / Gemini */

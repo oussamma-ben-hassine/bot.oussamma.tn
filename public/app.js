@@ -24,6 +24,7 @@ const state = {
 // Éléments du DOM
 const DOM = {
   sidebar: document.getElementById('sidebar'),
+  sidebarBackdrop: document.getElementById('sidebarBackdrop'),
   openSidebarBtn: document.getElementById('openSidebarBtn'),
   closeSidebarBtn: document.getElementById('closeSidebarBtn'),
   newChatBtn: document.getElementById('newChatBtn'),
@@ -159,12 +160,14 @@ function createNewConversation() {
   saveConversations();
   renderConversationsList();
   renderMessages();
+  closeMobileSidebar();
 }
 
 function selectConversation(id) {
   state.currentConversationId = id;
   renderConversationsList();
   renderMessages();
+  closeMobileSidebar();
 }
 
 function deleteConversation(id, event) {
@@ -493,8 +496,13 @@ async function handleSendMessage() {
 // ÉVÉNEMENTS
 // -------------------------------------------------------------
 function setupEventListeners() {
-  DOM.openSidebarBtn.onclick = () => DOM.sidebar.classList.remove('-translate-x-full');
-  DOM.closeSidebarBtn.onclick = () => DOM.sidebar.classList.add('-translate-x-full');
+  // Gestion Sidebar Responsive (Mobile & Desktop)
+  DOM.openSidebarBtn.onclick = openMobileSidebar;
+  DOM.closeSidebarBtn.onclick = closeMobileSidebar;
+  if (DOM.sidebarBackdrop) {
+    DOM.sidebarBackdrop.onclick = closeMobileSidebar;
+  }
+
   DOM.newChatBtn.onclick = () => createNewConversation();
 
   DOM.messageInput.addEventListener('input', () => {
@@ -619,4 +627,14 @@ function escapeHtml(string) {
   const div = document.createElement('div');
   div.innerText = string;
   return div.innerHTML;
+}
+
+function openMobileSidebar() {
+  DOM.sidebar.classList.remove('-translate-x-full');
+  if (DOM.sidebarBackdrop) DOM.sidebarBackdrop.classList.remove('hidden');
+}
+
+function closeMobileSidebar() {
+  DOM.sidebar.classList.add('-translate-x-full');
+  if (DOM.sidebarBackdrop) DOM.sidebarBackdrop.classList.add('hidden');
 }
