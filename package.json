@@ -1,0 +1,29 @@
+{
+  "name": "bot-oussamma-tn",
+  "version": "1.0.0",
+  "description": "Assistant IA intelligent avec SSO, recherche web et interface style Open WebUI / ChatGPT pour bot.oussamma.tn",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cookie-session": "^2.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "node-fetch": "^3.3.2"
+  },
+  "keywords": [
+    "ai",
+    "chatgpt",
+    "open-webui",
+    "sso",
+    "llm",
+    "web-search",
+    "gemini"
+  ],
+  "author": "Oussama",
+  "license": "MIT"
+}

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  bot-web:
+    build: .
+    container_name: bot-oussamma-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - APP_URL=https://bot.oussamma.tn
+      - SSO_BASE_URL=https://sso-a.oussamma.tn
+      - SSO_CLIENT_ID=client_bbe0d965db17d39880d411af
+      - SSO_CLIENT_SECRET=sec_eLi20e99kRC-hkfqC6LsxV-d4dbYzO2pyCB5g9sCIEA
+      - SSO_REDIRECT_URI=https://bot.oussamma.tn/auth/callback
+      - SSO_SCOPES=openid profile email
+      - SSO_AI_ENDPOINT=https://sso-a.oussamma.tn/api/ai
+      - SSO_AI_DEFAULT_MODEL=default-model
+      - SESSION_SECRET=bot-oussamma-super-secret-key-2026-prod
+    networks:
+      - bot-network
+
+networks:
+  bot-network:
+    driver: bridge
