@@ -216,7 +216,6 @@ app.get('/auth/callback', async (req, res) => {
     // 4. Stockage sécurisé des informations en session serveur
     req.session.access_token = accessToken;
     req.session.refresh_token = refreshToken;
-    req.session.id_token = idToken;
     req.session.user = {
       id: profile?.sub || profile?.id || 'sso-user',
       name: profile?.name || profile?.username || profile?.email || 'Utilisateur SSO',
@@ -483,11 +482,17 @@ app.post('/api/chat', async (req, res) => {
       if (newToken) {
         userAccessToken = newToken;
         aiResponse = await callSSOAI(userAccessToken, 'openai');
-      } else {
-        sendSSE('error', {
-          message: 'Votre session SSO a expiré. Veuillez vous reconnecter.',
-          code: 'session_expired',
-        });
+      }
+
+      if (aiResponse.status === 401) {
+        req.session = null;
+        const sessionExpiredMessage = 
+          `### ⚠️ Votre session SSO a expiré\n\n` +
+          `Votre jeton d'authentification central a expiré ou le serveur SSO a été mis à jour.\n\n` +
+          `👉 [**Cliquez ici pour vous reconnecter au SSO (1 clic)**](/auth/login)\n\n` +
+          `Une fois reconnecté, vos discussions reprendront immédiatement !`;
+
+        sendSSE('token', { token: sessionExpiredMessage });
         sendSSE('done', {});
         return res.end();
       }
