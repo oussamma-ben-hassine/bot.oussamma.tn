@@ -3,8 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bot Oussama — Assistant IA & Recherche Web</title>
+  <title>ChatGPT / Gemini — Bot Oussama</title>
   
+  <!-- Inter & Roboto Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -12,16 +17,21 @@
       darkMode: 'class',
       theme: {
         extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
           colors: {
-            brand: {
-              50: '#eff6ff',
-              500: '#3b82f6',
-              600: '#2563eb',
-              700: '#1d4ed8',
-            },
-            darkBg: '#0f172a',
-            darkSurface: '#1e293b',
-            darkInput: '#334155'
+            gpt: {
+              main: '#212121',       // Fond principal ChatGPT
+              sidebar: '#171717',    // Sidebar ChatGPT
+              hover: '#2f2f2f',      // Survol items
+              active: '#212121',     // Item actif
+              input: '#2f2f2f',      // Champ saisie
+              border: '#333333',     // Bordures douces
+              userBubble: '#2f2f2f', // Bulle utilisateur
+              textMuted: '#b4b4b4',  // Texte secondaire
+              accent: '#10a37f'      // Vert signature OpenAI
+            }
           }
         }
       }
@@ -34,302 +44,317 @@
   <!-- Marked.js pour le Markdown -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-  <!-- Highlight.js pour la coloration syntaxique -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <!-- Highlight.js avec style GitHub Dark / One Dark -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
   <link rel="stylesheet" href="/style.css">
 </head>
-<body class="bg-[#0b0f19] text-slate-100 flex h-screen overflow-hidden font-sans antialiased">
+<body class="bg-[#212121] text-[#ececec] flex h-screen overflow-hidden font-sans antialiased selection:bg-[#404040]">
 
-  <!-- SIDEBAR (Conversations & Profil) -->
-  <aside id="sidebar" class="w-72 bg-[#111827] border-r border-slate-800 flex flex-col transition-all duration-300 z-30 select-none">
+  <!-- SIDEBAR (Style ChatGPT / Open WebUI) -->
+  <aside id="sidebar" class="w-[260px] bg-[#171717] border-r border-[#262626] flex flex-col transition-all duration-300 z-30 select-none shrink-0">
     
-    <!-- En-tête Sidebar -->
-    <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
-          <i data-lucide="bot" class="w-5 h-5 text-white"></i>
+    <!-- En-tête Sidebar & Bouton Nouveau Chat -->
+    <div class="p-3 flex items-center justify-between">
+      <button id="newChatBtn" class="flex-1 py-2 px-3 rounded-lg hover:bg-[#212121] text-white flex items-center justify-between text-sm font-medium transition group">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-full bg-[#2f2f2f] flex items-center justify-center text-white">
+            <i data-lucide="sparkles" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <span class="text-xs font-semibold">Nouveau chat</span>
         </div>
-        <div>
-          <h1 class="font-bold text-sm text-white tracking-wide">bot.oussamma.tn</h1>
-          <p class="text-xs text-blue-400 font-medium">SSO & Web Search AI</p>
-        </div>
-      </div>
-      <button id="closeSidebarBtn" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
-        <i data-lucide="x" class="w-5 h-5"></i>
+        <i data-lucide="square-pen" class="w-4 h-4 text-[#8e8e8e] group-hover:text-white transition"></i>
+      </button>
+
+      <button id="closeSidebarBtn" class="lg:hidden p-2 rounded-lg text-[#8e8e8e] hover:text-white hover:bg-[#212121] ml-1">
+        <i data-lucide="panel-left-close" class="w-4 h-4"></i>
       </button>
     </div>
 
-    <!-- Bouton Nouvelle Conversation -->
-    <div class="p-3">
-      <button id="newChatBtn" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl flex items-center justify-center gap-2 text-sm font-semibold shadow-md shadow-blue-600/20 transition duration-150">
-        <i data-lucide="plus-circle" class="w-4 h-4"></i>
-        Nouvelle discussion
-      </button>
-    </div>
-
-    <!-- Liste des conversations -->
-    <div class="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 custom-scrollbar" id="conversationsList">
+    <!-- Section Conversations avec Catégorisation -->
+    <div class="flex-1 overflow-y-auto px-2 py-1 space-y-1 custom-scrollbar" id="conversationsList">
       <!-- Rempli dynamiquement -->
     </div>
 
-    <!-- Section Utilisateur & Paramètres en bas -->
-    <div class="p-3 border-t border-slate-800/80 bg-[#0d131f] space-y-2">
-      <!-- Badge SSO & Profil -->
-      <div id="userProfileCard" class="flex items-center justify-between p-2 rounded-xl bg-slate-800/50 border border-slate-800">
+    <!-- Pied de Sidebar : Utilisateur & Paramètres -->
+    <div class="p-2 border-t border-[#262626] bg-[#171717] space-y-1">
+      
+      <!-- Carte Profil SSO -->
+      <div id="userProfileCard" class="flex items-center justify-between p-2 rounded-lg hover:bg-[#212121] transition cursor-pointer group">
         <div class="flex items-center gap-2.5 overflow-hidden">
-          <div id="userAvatar" class="w-8 h-8 rounded-full bg-blue-700 text-white flex items-center justify-center font-bold text-xs shrink-0">
-            ?
+          <div id="userAvatar" class="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-semibold text-xs shrink-0 shadow">
+            O
           </div>
           <div class="truncate">
-            <p id="userName" class="text-xs font-semibold text-slate-200 truncate">Invité</p>
-            <p id="userStatus" class="text-[10px] text-slate-400 truncate flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span> Non connecté
+            <p id="userName" class="text-xs font-medium text-white truncate">Oussama</p>
+            <p id="userStatus" class="text-[10px] text-emerald-400 font-medium truncate flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span> SSO Connecté
             </p>
           </div>
         </div>
-        <button id="authBtn" title="Connexion SSO" class="p-1.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-slate-700/50 rounded-lg transition">
-          <i data-lucide="log-in" class="w-4 h-4"></i>
-        </button>
+
+        <div class="flex items-center gap-1">
+          <button id="openSettingsBtn" title="Paramètres IA & Web Search" class="p-1.5 rounded-md text-[#8e8e8e] hover:text-white hover:bg-[#2f2f2f] transition">
+            <i data-lucide="settings" class="w-4 h-4"></i>
+          </button>
+          <button id="authBtn" title="Connexion / Déconnexion SSO" class="p-1.5 rounded-md text-[#8e8e8e] hover:text-red-400 hover:bg-[#2f2f2f] transition">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
       </div>
 
-      <!-- Boutons Actions -->
-      <div class="flex items-center gap-1.5">
-        <button id="openSettingsBtn" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 flex items-center justify-center gap-1.5 transition">
-          <i data-lucide="sliders" class="w-3.5 h-3.5 text-blue-400"></i>
-          Paramètres
-        </button>
-        <button id="clearAllChatsBtn" title="Effacer l'historique" class="p-1.5 rounded-lg text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-slate-700 transition">
-          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-        </button>
-      </div>
     </div>
   </aside>
 
-  <!-- CONTENU PRINCIPAL -->
-  <main class="flex-1 flex flex-col h-full bg-[#0b0f19] relative overflow-hidden">
+  <!-- CONTENU PRINCIPAL (Chat Area) -->
+  <main class="flex-1 flex flex-col h-full bg-[#212121] relative overflow-hidden">
     
-    <!-- HEADER BAR -->
-    <header class="h-14 border-b border-slate-800 px-4 flex items-center justify-between bg-[#111827]/80 backdrop-blur z-20">
-      <div class="flex items-center gap-3">
-        <button id="openSidebarBtn" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
-          <i data-lucide="menu" class="w-5 h-5"></i>
+    <!-- HEADER BAR ÉPURÉ (Style ChatGPT 4o / Gemini) -->
+    <header class="h-12 border-b border-[#2d2d2d]/60 px-4 flex items-center justify-between bg-[#212121]/90 backdrop-blur z-20">
+      <div class="flex items-center gap-2">
+        <button id="openSidebarBtn" class="p-1.5 rounded-lg text-[#8e8e8e] hover:text-white hover:bg-[#2f2f2f] transition">
+          <i data-lucide="panel-left-open" class="w-4 h-4"></i>
         </button>
-        
-        <!-- Sélecteur rapide de modèle -->
+
+        <!-- Sélecteur de modèle style ChatGPT -->
         <div class="relative inline-block">
-          <button id="modelSelectorBtn" class="flex items-center gap-2 py-1.5 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-xs font-medium text-slate-200 border border-slate-700/60 transition">
-            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span id="currentModelLabel">SSO LLM (Défaut)</span>
-            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+          <button id="modelSelectorBtn" class="flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:bg-[#2f2f2f] text-sm font-semibold text-[#c7c7c7] hover:text-white transition group">
+            <span id="currentModelLabel" class="text-[13px] font-semibold text-white">GPT-4o (Codex SSO)</span>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-[#8e8e8e] group-hover:text-white transition"></i>
           </button>
           
           <!-- Dropdown modèles -->
-          <div id="modelDropdown" class="hidden absolute top-full left-0 mt-1.5 w-60 bg-[#1e293b] border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50">
-            <button class="w-full text-left px-3.5 py-2 text-xs hover:bg-slate-700/60 flex items-center justify-between" data-model="sso">
-              <span>🤖 SSO LLM (Configuré)</span>
-              <span class="text-[10px] bg-blue-900/60 text-blue-300 px-1.5 py-0.5 rounded">SSO</span>
-            </button>
-            <button class="w-full text-left px-3.5 py-2 text-xs hover:bg-slate-700/60 flex items-center justify-between" data-model="openai">
-              <span>⚡ OpenAI (GPT-4o)</span>
-              <span class="text-[10px] bg-emerald-900/60 text-emerald-300 px-1.5 py-0.5 rounded">OpenAI</span>
-            </button>
-            <button class="w-full text-left px-3.5 py-2 text-xs hover:bg-slate-700/60 flex items-center justify-between" data-model="gemini">
-              <span>✨ Google Gemini (2.0)</span>
-              <span class="text-[10px] bg-purple-900/60 text-purple-300 px-1.5 py-0.5 rounded">Gemini</span>
-            </button>
-            <button class="w-full text-left px-3.5 py-2 text-xs hover:bg-slate-700/60 flex items-center justify-between" data-model="ollama">
-              <span>🦙 Ollama / Local</span>
-              <span class="text-[10px] bg-amber-900/60 text-amber-300 px-1.5 py-0.5 rounded">Local</span>
-            </button>
+          <div id="modelDropdown" class="hidden absolute top-full left-0 mt-1.5 w-64 bg-[#2f2f2f] border border-[#3e3e3e] rounded-xl shadow-2xl py-1.5 z-50 divide-y divide-[#3e3e3e]">
+            <div class="px-3 py-2 text-[11px] text-[#999999] font-medium uppercase tracking-wider">
+              Modèles Disponibles
+            </div>
+            <div class="py-1">
+              <button class="w-full text-left px-3.5 py-2 hover:bg-[#383838] flex items-center justify-between group" data-model="sso">
+                <div>
+                  <div class="text-xs font-semibold text-white group-hover:text-emerald-400 flex items-center gap-1.5">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-emerald-400"></i>
+                    GPT-4o (SSO Codex)
+                  </div>
+                  <div class="text-[10px] text-[#9b9b9b]">Abonnement ChatGPT lié au SSO</div>
+                </div>
+                <span class="text-[10px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-800">Défaut</span>
+              </button>
+
+              <button class="w-full text-left px-3.5 py-2 hover:bg-[#383838] flex items-center justify-between group" data-model="gemini">
+                <div>
+                  <div class="text-xs font-semibold text-white group-hover:text-blue-400 flex items-center gap-1.5">
+                    <i data-lucide="gem" class="w-3.5 h-3.5 text-blue-400"></i>
+                    Gemini 2.0 Flash
+                  </div>
+                  <div class="text-[10px] text-[#9b9b9b]">Ultra-rapide avec raisonnement étendu</div>
+                </div>
+              </button>
+
+              <button class="w-full text-left px-3.5 py-2 hover:bg-[#383838] flex items-center justify-between group" data-model="ollama">
+                <div>
+                  <div class="text-xs font-semibold text-white group-hover:text-amber-400 flex items-center gap-1.5">
+                    <i data-lucide="terminal" class="w-3.5 h-3.5 text-amber-400"></i>
+                    Modèle Local (Ollama)
+                  </div>
+                  <div class="text-[10px] text-[#9b9b9b]">Serveur local auto-hébergé</div>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Badge SSO Live -->
+      <!-- Badge sso-a.oussamma.tn -->
       <div class="flex items-center gap-2">
-        <div id="ssoBadge" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] bg-blue-950/70 border border-blue-800 text-blue-300">
-          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-blue-400"></i>
-          <span>SSO Connecté : sso-a.oussamma.tn</span>
-        </div>
+        <a href="https://sso-a.oussamma.tn" target="_blank" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] bg-[#2a2a2a] hover:bg-[#333333] border border-[#383838] text-[#c4c4c4] transition">
+          <i data-lucide="shield-check" class="w-3 h-3 text-emerald-400"></i>
+          <span>sso-a.oussamma.tn</span>
+        </a>
       </div>
     </header>
 
-    <!-- ZONE DE CHAT SCROLLABLE -->
-    <div id="chatMessages" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-4xl w-full mx-auto custom-scrollbar">
+    <!-- ZONE DE CHAT AVEC DÉFILEMENT DOUX -->
+    <div id="chatMessages" class="flex-1 overflow-y-auto px-4 sm:px-6 py-6 max-w-3xl w-full mx-auto custom-scrollbar space-y-6">
       
-      <!-- ÉCRAN D'ACCUEIL (Quand aucune discussion active) -->
-      <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center my-auto px-4 py-12">
-        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-2xl shadow-blue-500/20 mb-6">
-          <i data-lucide="sparkles" class="w-8 h-8 text-white"></i>
+      <!-- ÉCRAN D'ACCUEIL (Style Gemini / ChatGPT minimaliste) -->
+      <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center my-auto px-4 py-8">
+        
+        <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/10 mb-4">
+          <i data-lucide="sparkles" class="w-6 h-6 text-white"></i>
         </div>
-        <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">Comment puis-je vous aider aujourd'hui ?</h2>
-        <p class="text-sm text-slate-400 max-w-md mb-8">
-          Assistant connecté au SSO <span class="text-blue-400">sso-a.oussamma.tn</span> avec recherche web en temps réel et modèles configurables.
+
+        <h1 class="text-2xl sm:text-3xl font-bold text-white mb-2 tracking-tight">
+          Bonjour, Oussama
+        </h1>
+        <p class="text-sm text-[#8e8e8e] max-w-md mb-8">
+          Que puis-je faire pour vous aujourd'hui ?
         </p>
 
-        <!-- Suggestions de prompts rapides -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg w-full text-left">
-          <button class="prompt-suggestion p-3.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500/50 transition duration-150 group">
-            <p class="text-xs font-semibold text-slate-200 group-hover:text-blue-400 flex items-center gap-1.5">
-              <i data-lucide="search" class="w-3.5 h-3.5 text-blue-400"></i>
+        <!-- Suggestions de prompts rapides style cartes ChatGPT / Gemini -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-lg w-full text-left">
+          <button class="prompt-suggestion p-3.5 rounded-2xl bg-[#2a2a2a] hover:bg-[#333333] border border-[#383838] transition group text-left">
+            <div class="flex items-center gap-2 text-xs font-semibold text-white group-hover:text-emerald-400">
+              <i data-lucide="globe" class="w-3.5 h-3.5 text-emerald-400"></i>
               Recherche Web en direct
-            </p>
-            <p class="text-[11px] text-slate-400 mt-1">Quelles sont les dernières actualités IA cette semaine ?</p>
+            </div>
+            <p class="text-[11px] text-[#a3a3a3] mt-1 line-clamp-1">Quelles sont les dernières actualités IA cette semaine ?</p>
           </button>
 
-          <button class="prompt-suggestion p-3.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500/50 transition duration-150 group">
-            <p class="text-xs font-semibold text-slate-200 group-hover:text-blue-400 flex items-center gap-1.5">
-              <i data-lucide="code" class="w-3.5 h-3.5 text-blue-400"></i>
+          <button class="prompt-suggestion p-3.5 rounded-2xl bg-[#2a2a2a] hover:bg-[#333333] border border-[#383838] transition group text-left">
+            <div class="flex items-center gap-2 text-xs font-semibold text-white group-hover:text-emerald-400">
+              <i data-lucide="code" class="w-3.5 h-3.5 text-emerald-400"></i>
               Développement & Code
-            </p>
-            <p class="text-[11px] text-slate-400 mt-1">Écris un script Docker Compose avec Nginx et SSL Let's Encrypt</p>
+            </div>
+            <p class="text-[11px] text-[#a3a3a3] mt-1 line-clamp-1">Écris un script Docker Compose avec Nginx et SSL</p>
           </button>
 
-          <button class="prompt-suggestion p-3.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500/50 transition duration-150 group">
-            <p class="text-xs font-semibold text-slate-200 group-hover:text-blue-400 flex items-center gap-1.5">
-              <i data-lucide="shield" class="w-3.5 h-3.5 text-blue-400"></i>
-              Configuration SSO
-            </p>
-            <p class="text-[11px] text-slate-400 mt-1">Explique le fonctionnement du flux OAuth2/OIDC avec sso-a.oussamma.tn</p>
+          <button class="prompt-suggestion p-3.5 rounded-2xl bg-[#2a2a2a] hover:bg-[#333333] border border-[#383838] transition group text-left">
+            <div class="flex items-center gap-2 text-xs font-semibold text-white group-hover:text-emerald-400">
+              <i data-lucide="shield" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Architecture SSO
+            </div>
+            <p class="text-[11px] text-[#a3a3a3] mt-1 line-clamp-1">Explique le flux OAuth2/OIDC avec sso-a.oussamma.tn</p>
           </button>
 
-          <button class="prompt-suggestion p-3.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500/50 transition duration-150 group">
-            <p class="text-xs font-semibold text-slate-200 group-hover:text-blue-400 flex items-center gap-1.5">
-              <i data-lucide="lightbulb" class="w-3.5 h-3.5 text-blue-400"></i>
-              Brainstorming & Synthèse
-            </p>
-            <p class="text-[11px] text-slate-400 mt-1">Donne-moi 5 idées d'automatisation avec un agent IA</p>
+          <button class="prompt-suggestion p-3.5 rounded-2xl bg-[#2a2a2a] hover:bg-[#333333] border border-[#383838] transition group text-left">
+            <div class="flex items-center gap-2 text-xs font-semibold text-white group-hover:text-emerald-400">
+              <i data-lucide="lightbulb" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Idées & Automatisation
+            </div>
+            <p class="text-[11px] text-[#a3a3a3] mt-1 line-clamp-1">Donne-moi 5 idées d'automatisation avec Coolify et Docker</p>
           </button>
         </div>
       </div>
 
     </div>
 
-    <!-- ZONE DE SAISIE FIXE EN BAS -->
-    <div class="p-4 bg-gradient-to-t from-[#0b0f19] via-[#0b0f19] to-transparent z-20">
-      <div class="max-w-4xl w-full mx-auto relative bg-[#1e293b] border border-slate-700/80 rounded-2xl shadow-2xl p-2.5 transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20">
+    <!-- ZONE DE SAISIE CENTRALE STYLE CHATGPT / GEMINI -->
+    <div class="p-4 bg-gradient-to-t from-[#212121] via-[#212121] to-transparent z-20">
+      <div class="max-w-3xl w-full mx-auto">
         
-        <!-- Indicateur de statut de recherche web -->
-        <div id="searchIndicator" class="hidden mb-2 px-3 py-1.5 rounded-lg bg-blue-950/80 border border-blue-800/60 text-xs text-blue-300 flex items-center gap-2 animate-pulse">
-          <i data-lucide="search" class="w-3.5 h-3.5 text-blue-400"></i>
-          <span id="searchIndicatorText">Recherche sur le Web en cours...</span>
-        </div>
-
-        <textarea
-          id="messageInput"
-          rows="1"
-          placeholder="Envoyez un message à Bot Oussama..."
-          class="w-full bg-transparent text-slate-100 placeholder-slate-400 text-sm focus:outline-none resize-none px-2 max-h-48 custom-scrollbar leading-relaxed"
-        ></textarea>
-
-        <div class="flex items-center justify-between pt-2 border-t border-slate-700/40 mt-1 px-1">
-          <!-- Toggle Recherche Web -->
-          <div class="flex items-center gap-2">
-            <button
-              id="webSearchToggle"
-              type="button"
-              title="Activer la recherche web en direct"
-              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition duration-150 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700"
-            >
-              <i data-lucide="globe" class="w-4 h-4"></i>
-              <span>Recherche Web</span>
-              <span id="webSearchBadge" class="w-2 h-2 rounded-full bg-slate-500"></span>
-            </button>
+        <!-- Boîte de saisie arrondie principale -->
+        <div class="relative bg-[#2f2f2f] rounded-3xl border border-[#3a3a3a] shadow-xl p-2.5 transition focus-within:border-[#4d4d4d] focus-within:ring-1 focus-within:ring-[#4d4d4d]">
+          
+          <!-- Indicateur de recherche web -->
+          <div id="searchIndicator" class="hidden mb-2 px-3 py-1.5 rounded-xl bg-[#242424] text-xs text-emerald-400 flex items-center gap-2 border border-[#383838] animate-pulse">
+            <i data-lucide="search" class="w-3.5 h-3.5"></i>
+            <span id="searchIndicatorText">Recherche sur le Web en cours...</span>
           </div>
 
-          <!-- Bouton Envoyer -->
-          <div class="flex items-center gap-2">
-            <button
-              id="sendBtn"
-              type="button"
-              disabled
-              class="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:hover:bg-blue-600 transition shadow-lg shadow-blue-600/30"
-            >
-              <i data-lucide="arrow-up" class="w-4 h-4"></i>
-            </button>
+          <textarea
+            id="messageInput"
+            rows="1"
+            placeholder="Posez une question à Bot Oussama..."
+            class="w-full bg-transparent text-[#ececec] placeholder-[#8e8e8e] text-sm focus:outline-none resize-none px-3.5 pt-1.5 max-h-48 custom-scrollbar leading-relaxed"
+          ></textarea>
+
+          <div class="flex items-center justify-between pt-2 px-1">
+            <!-- Bouton Toggle Recherche Web style ChatGPT Search -->
+            <div class="flex items-center gap-1.5">
+              <button
+                id="webSearchToggle"
+                type="button"
+                title="Activer la recherche sur le Web"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-[#8e8e8e] hover:text-white bg-[#262626] hover:bg-[#383838] border border-[#383838] transition"
+              >
+                <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                <span>Recherche</span>
+                <span id="webSearchBadge" class="w-1.5 h-1.5 rounded-full bg-[#666666]"></span>
+              </button>
+            </div>
+
+            <!-- Bouton Envoyer style cercle ChatGPT -->
+            <div class="flex items-center gap-2">
+              <button
+                id="sendBtn"
+                type="button"
+                disabled
+                class="w-8 h-8 rounded-full bg-white text-black hover:bg-[#e0e0e0] disabled:bg-[#424242] disabled:text-[#737373] flex items-center justify-center transition shadow font-bold"
+              >
+                <i data-lucide="arrow-up" class="w-4 h-4"></i>
+              </button>
+            </div>
           </div>
+
         </div>
+
+        <p class="text-center text-[11px] text-[#717171] mt-2">
+          bot.oussamma.tn peut faire des erreurs. Vérifiez les informations importantes.
+        </p>
 
       </div>
-
-      <p class="text-center text-[11px] text-slate-500 mt-2">
-        bot.oussamma.tn peut faire des erreurs. Vérifiez les informations sensibles.
-      </p>
     </div>
 
   </main>
 
-  <!-- MODAL DE PARAMÈTRES (CONFIGURABLE PAR L'UTILISATEUR) -->
-  <div id="settingsModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-[#111827] border border-slate-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-fade-in">
+  <!-- MODAL DE PARAMÈTRES (CONFIGURABLE) -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-[#1e1e1e] border border-[#333333] rounded-2xl max-w-md w-full overflow-hidden shadow-2xl animate-fade-in">
       
-      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+      <div class="p-4 border-b border-[#2d2d2d] flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <i data-lucide="settings" class="w-5 h-5 text-blue-400"></i>
-          <h3 class="font-bold text-white text-base">Configuration IA & Recherche</h3>
+          <i data-lucide="sliders-horizontal" class="w-4 h-4 text-emerald-400"></i>
+          <h3 class="font-semibold text-white text-sm">Paramètres & Modèles</h3>
         </div>
-        <button id="closeSettingsModal" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
-          <i data-lucide="x" class="w-5 h-5"></i>
+        <button id="closeSettingsModal" class="p-1 rounded-lg text-[#8e8e8e] hover:text-white hover:bg-[#2f2f2f]">
+          <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
+      <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar text-xs">
         <!-- Fournisseur IA -->
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Fournisseur d'IA (Provider)</label>
-          <select id="configProvider" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
-            <option value="sso">SSO IA (Recommandé - config de sso-a.oussamma.tn)</option>
-            <option value="openai">OpenAI (GPT-4o, GPT-4o-mini)</option>
-            <option value="gemini">Google Gemini (Gemini 2.0 / 1.5)</option>
+          <label class="block font-medium text-[#cccccc] mb-1.5">Fournisseur d'IA</label>
+          <select id="configProvider" class="w-full bg-[#2a2a2a] border border-[#3e3e3e] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
+            <option value="sso">SSO IA (Recommandé - Codex ChatGPT via sso-a.oussamma.tn)</option>
+            <option value="openai">OpenAI Direct (GPT-4o, o1)</option>
+            <option value="gemini">Google Gemini Direct</option>
             <option value="ollama">Ollama Local (http://localhost:11434)</option>
-            <option value="custom">API personnalisée compatible OpenAI</option>
+            <option value="custom">API Custom OpenAI-Compatible</option>
           </select>
         </div>
 
         <!-- Endpoint API IA -->
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Endpoint API IA / Proxy SSO</label>
-          <input type="text" id="configEndpoint" placeholder="https://sso-a.oussamma.tn/api/ai" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
-          <p class="text-[10px] text-slate-400 mt-1">Par défaut, pointe vers l'API IA configurée sur votre SSO.</p>
+          <label class="block font-medium text-[#cccccc] mb-1.5">Endpoint API IA</label>
+          <input type="text" id="configEndpoint" placeholder="https://sso-a.oussamma.tn/api/v1/integrations/ai/prompt" class="w-full bg-[#2a2a2a] border border-[#3e3e3e] rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500">
         </div>
 
-        <!-- Modèle par défaut -->
+        <!-- Nom du modèle -->
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Nom du modèle</label>
-          <input type="text" id="configModel" placeholder="default-model / gpt-4o / gemini-2.0-flash" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
+          <label class="block font-medium text-[#cccccc] mb-1.5">Nom du modèle</label>
+          <input type="text" id="configModel" placeholder="gpt-4o" class="w-full bg-[#2a2a2a] border border-[#3e3e3e] rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500">
         </div>
 
         <!-- Clé API personnalisée (optionnelle) -->
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Clé API (Optionnelle - si provider tiers)</label>
-          <input type="password" id="configApiKey" placeholder="sk-..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
-          <p class="text-[10px] text-slate-400 mt-1">Si vous utilisez le SSO, votre authentification SSO s'en charge automatiquement.</p>
+          <label class="block font-medium text-[#cccccc] mb-1.5">Clé API (Optionnelle si hors SSO)</label>
+          <input type="password" id="configApiKey" placeholder="sk-..." class="w-full bg-[#2a2a2a] border border-[#3e3e3e] rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500">
         </div>
 
         <!-- System Prompt -->
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Prompt Système Personnalisé</label>
-          <textarea id="configSystemPrompt" rows="3" placeholder="Tu es un assistant IA conversationnel..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 leading-relaxed"></textarea>
+          <label class="block font-medium text-[#cccccc] mb-1.5">Instructions personnalisées (System Prompt)</label>
+          <textarea id="configSystemPrompt" rows="3" placeholder="Tu es un assistant IA précis, intelligent..." class="w-full bg-[#2a2a2a] border border-[#3e3e3e] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500 leading-relaxed"></textarea>
         </div>
 
-        <!-- Activer la recherche web par défaut -->
-        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50 border border-slate-800">
+        <!-- Recherche web par défaut -->
+        <div class="flex items-center justify-between p-3 rounded-xl bg-[#262626] border border-[#333333]">
           <div>
-            <p class="text-xs font-semibold text-slate-200">Recherche Web toujours active</p>
-            <p class="text-[10px] text-slate-400">Interroge automatiquement le web pour les questions d'actualités</p>
+            <p class="font-medium text-white">Recherche Web toujours active</p>
+            <p class="text-[10px] text-[#8e8e8e]">Interroge automatiquement le Web pour les actus fraîches</p>
           </div>
-          <input type="checkbox" id="configDefaultWebSearch" class="w-4 h-4 rounded text-blue-600 bg-slate-700 border-slate-600 focus:ring-blue-500">
+          <input type="checkbox" id="configDefaultWebSearch" class="w-4 h-4 rounded text-emerald-600 bg-[#333] border-[#444] focus:ring-emerald-500">
         </div>
       </div>
 
-      <div class="p-4 border-t border-slate-800 bg-[#0d131f] flex justify-end gap-2">
-        <button id="cancelSettingsBtn" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white rounded-xl bg-slate-800 hover:bg-slate-700 transition">
+      <div class="p-4 border-t border-[#2d2d2d] bg-[#1a1a1a] flex justify-end gap-2">
+        <button id="cancelSettingsBtn" class="px-3.5 py-1.5 text-xs text-[#8e8e8e] hover:text-white rounded-lg bg-[#2a2a2a] hover:bg-[#333333] transition">
           Annuler
         </button>
-        <button id="saveSettingsBtn" class="px-4 py-2 text-xs font-medium text-white rounded-xl bg-blue-600 hover:bg-blue-500 transition shadow-md shadow-blue-600/30">
-          Enregistrer les modifications
+        <button id="saveSettingsBtn" class="px-3.5 py-1.5 text-xs font-semibold text-black rounded-lg bg-white hover:bg-[#e0e0e0] transition shadow">
+          Enregistrer
         </button>
       </div>
 

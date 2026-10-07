@@ -13,10 +13,10 @@ const state = {
   user: null,
   config: {
     provider: 'sso',
-    ssoEndpoint: 'https://sso-a.oussamma.tn/api/ai',
-    model: 'default-model',
+    ssoEndpoint: 'https://sso-a.oussamma.tn/api/v1/integrations/ai/prompt',
+    model: 'gpt-4o',
     apiKey: '',
-    systemPrompt: "Tu es un assistant IA intelligent, précis et serviable pour bot.oussamma.tn. Réponds avec pertinence et structure tes réponses avec du beau Markdown.",
+    systemPrompt: "Tu es un assistant IA conversationnel moderne, intelligent et serviable. Réponds avec précision, clarté et structure toujours tes réponses avec du beau Markdown.",
     defaultWebSearch: false
   }
 };
@@ -32,7 +32,6 @@ const DOM = {
   userName: document.getElementById('userName'),
   userStatus: document.getElementById('userStatus'),
   authBtn: document.getElementById('authBtn'),
-  ssoBadge: document.getElementById('ssoBadge'),
   chatMessages: document.getElementById('chatMessages'),
   welcomeScreen: document.getElementById('welcomeScreen'),
   messageInput: document.getElementById('messageInput'),
@@ -54,8 +53,7 @@ const DOM = {
   configModel: document.getElementById('configModel'),
   configApiKey: document.getElementById('configApiKey'),
   configSystemPrompt: document.getElementById('configSystemPrompt'),
-  configDefaultWebSearch: document.getElementById('configDefaultWebSearch'),
-  clearAllChatsBtn: document.getElementById('clearAllChatsBtn')
+  configDefaultWebSearch: document.getElementById('configDefaultWebSearch')
 };
 
 // Initialisation de l'application
@@ -65,7 +63,6 @@ async function initApp() {
   setupEventListeners();
   await checkAuthStatus();
 
-  // Si des discussions existent, charger la plus récente, sinon écran d'accueil
   if (state.conversations.length > 0) {
     selectConversation(state.conversations[0].id);
   } else {
@@ -74,7 +71,7 @@ async function initApp() {
 }
 
 // -------------------------------------------------------------
-// GESTION DU STOCKAGE LOCAL (LocalStorage)
+// STOCKAGE LOCAL
 // -------------------------------------------------------------
 function loadConfig() {
   const saved = localStorage.getItem('bot_oussamma_config');
@@ -82,7 +79,7 @@ function loadConfig() {
     try {
       state.config = { ...state.config, ...JSON.parse(saved) };
     } catch (e) {
-      console.error('Erreur chargement configuration:', e);
+      console.error('Erreur chargement config:', e);
     }
   }
   state.webSearchEnabled = state.config.defaultWebSearch || false;
@@ -119,29 +116,26 @@ async function checkAuthStatus() {
     const data = await res.json();
     if (data.authenticated && data.user) {
       state.user = data.user;
-      DOM.userName.textContent = data.user.name || 'Utilisateur SSO';
-      DOM.userStatus.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> Connecté SSO`;
+      DOM.userName.textContent = data.user.name || 'Oussama';
+      DOM.userStatus.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span> Connecté SSO`;
       
       if (data.user.avatar) {
         DOM.userAvatar.innerHTML = `<img src="${data.user.avatar}" class="w-full h-full rounded-full object-cover">`;
       } else {
-        const initial = (data.user.name || 'U').charAt(0).toUpperCase();
+        const initial = (data.user.name || 'O').charAt(0).toUpperCase();
         DOM.userAvatar.textContent = initial;
       }
 
       DOM.authBtn.title = 'Déconnexion SSO';
-      DOM.authBtn.innerHTML = `<i data-lucide="log-out" class="w-4 h-4 text-slate-400 hover:text-red-400"></i>`;
+      DOM.authBtn.innerHTML = `<i data-lucide="log-out" class="w-4 h-4 text-[#8e8e8e] hover:text-red-400"></i>`;
       DOM.authBtn.onclick = () => window.location.href = '/auth/logout';
-      DOM.ssoBadge.classList.remove('hidden');
-      DOM.ssoBadge.classList.add('flex');
     } else {
       DOM.userName.textContent = 'Invité';
       DOM.userStatus.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span> Non connecté`;
       DOM.userAvatar.textContent = '?';
-      DOM.authBtn.title = 'Connexion via SSO';
-      DOM.authBtn.innerHTML = `<i data-lucide="log-in" class="w-4 h-4 text-blue-400"></i>`;
+      DOM.authBtn.title = 'Connexion SSO';
+      DOM.authBtn.innerHTML = `<i data-lucide="log-in" class="w-4 h-4 text-emerald-400"></i>`;
       DOM.authBtn.onclick = () => window.location.href = '/auth/login';
-      DOM.ssoBadge.classList.add('hidden');
     }
     lucide.createIcons();
   } catch (e) {
@@ -150,12 +144,12 @@ async function checkAuthStatus() {
 }
 
 // -------------------------------------------------------------
-// GESTION DES CONVERSATIONS
+// CONVERSATIONS
 // -------------------------------------------------------------
 function createNewConversation() {
   const newChat = {
     id: 'chat_' + Date.now(),
-    title: 'Nouvelle discussion',
+    title: 'Nouveau chat',
     createdAt: new Date().toISOString(),
     messages: []
   };
@@ -193,17 +187,17 @@ function renderConversationsList() {
   state.conversations.forEach(chat => {
     const isActive = chat.id === state.currentConversationId;
     const btn = document.createElement('div');
-    btn.className = `group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer text-xs font-medium transition duration-150 ${
-      isActive ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+    btn.className = `group flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer text-xs font-medium transition duration-150 ${
+      isActive ? 'bg-[#212121] text-white font-semibold' : 'text-[#b4b4b4] hover:text-white hover:bg-[#212121]/60'
     }`;
     
     btn.innerHTML = `
       <div class="flex items-center gap-2 truncate">
-        <i data-lucide="message-square" class="w-3.5 h-3.5 shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-500'}"></i>
-        <span class="truncate">${chat.title}</span>
+        <i data-lucide="message-square" class="w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-[#737373]'}"></i>
+        <span class="truncate">${escapeHtml(chat.title)}</span>
       </div>
-      <button class="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition" title="Supprimer">
-        <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+      <button class="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-[#737373] transition" title="Supprimer">
+        <i data-lucide="trash" class="w-3 h-3"></i>
       </button>
     `;
 
@@ -217,7 +211,7 @@ function renderConversationsList() {
 }
 
 // -------------------------------------------------------------
-// RENDU DU CHAT ET MESSAGES
+// RENDU DU CHAT
 // -------------------------------------------------------------
 function getCurrentConversation() {
   return state.conversations.find(c => c.id === state.currentConversationId);
@@ -245,26 +239,26 @@ function renderMessages() {
 function appendMessageToDOM(msg) {
   const isUser = msg.role === 'user';
   const row = document.createElement('div');
-  row.className = `flex gap-3 sm:gap-4 ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`;
+  row.className = `flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in w-full`;
 
   if (isUser) {
     row.innerHTML = `
-      <div class="max-w-[85%] sm:max-w-[75%] bg-blue-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 shadow-md">
-        <p class="text-sm whitespace-pre-wrap leading-relaxed">${escapeHtml(msg.content)}</p>
+      <div class="user-bubble">
+        ${escapeHtml(msg.content)}
       </div>
     `;
   } else {
-    // Message Assistant
+    // Message Assistant style ChatGPT
     const sourcesHtml = msg.webSources && msg.webSources.length > 0 ? `
-      <div class="mb-3 p-2.5 rounded-xl bg-slate-800/90 border border-slate-700/60 text-xs text-slate-300">
-        <div class="flex items-center gap-1.5 font-semibold text-blue-400 mb-2">
+      <div class="mb-3 p-2.5 rounded-xl bg-[#282828] border border-[#383838] text-xs text-[#d1d1d1]">
+        <div class="flex items-center gap-1.5 font-semibold text-emerald-400 mb-2">
           <i data-lucide="globe" class="w-3.5 h-3.5"></i>
-          <span>Sources web trouvées (${msg.webSources.length}) :</span>
+          <span>Sources web citées (${msg.webSources.length}) :</span>
         </div>
         <div class="space-y-1.5">
           ${msg.webSources.map((s, idx) => `
-            <a href="${s.url}" target="_blank" rel="noopener noreferrer" class="block hover:underline truncate text-slate-400 hover:text-blue-300">
-              <span class="font-mono text-[10px] text-blue-400 font-bold">[${idx + 1}]</span> ${escapeHtml(s.title || s.url)}
+            <a href="${s.url}" target="_blank" rel="noopener noreferrer" class="block hover:underline truncate text-[#a3a3a3] hover:text-emerald-300">
+              <span class="font-mono text-[10px] text-emerald-400 font-bold">[${idx + 1}]</span> ${escapeHtml(s.title || s.url)}
             </a>
           `).join('')}
         </div>
@@ -272,23 +266,24 @@ function appendMessageToDOM(msg) {
     ` : '';
 
     row.innerHTML = `
-      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shrink-0 shadow-md">
-        <i data-lucide="bot" class="w-4 h-4 text-white"></i>
-      </div>
-      <div class="flex-1 max-w-[90%] sm:max-w-[85%] space-y-2">
-        ${sourcesHtml}
-        <div class="bg-[#172033] border border-slate-800/80 rounded-2xl rounded-tl-sm p-4 text-slate-200 markdown-body shadow-sm">
-          ${marked.parse(msg.content || '')}
+      <div class="flex gap-4 w-full">
+        <div class="w-7 h-7 rounded-full bg-[#2f2f2f] flex items-center justify-center shrink-0 border border-[#3e3e3e]">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-emerald-400"></i>
         </div>
-        <div class="flex items-center gap-2 text-[11px] text-slate-500 pl-1">
-          <button class="copy-msg-btn flex items-center gap-1 hover:text-slate-300 transition" title="Copier la réponse">
-            <i data-lucide="copy" class="w-3 h-3"></i> Copier
-          </button>
+        <div class="flex-1 overflow-hidden space-y-2">
+          ${sourcesHtml}
+          <div class="assistant-message markdown-body">
+            ${marked.parse(msg.content || '')}
+          </div>
+          <div class="flex items-center gap-3 pt-1 text-[11px] text-[#737373]">
+            <button class="copy-msg-btn flex items-center gap-1 hover:text-white transition" title="Copier">
+              <i data-lucide="copy" class="w-3 h-3"></i> Copier
+            </button>
+          </div>
         </div>
       </div>
     `;
 
-    // Gestion du bouton copier
     const copyBtn = row.querySelector('.copy-msg-btn');
     if (copyBtn) {
       copyBtn.onclick = () => {
@@ -304,30 +299,51 @@ function appendMessageToDOM(msg) {
   }
 
   DOM.chatMessages.appendChild(row);
-  highlightCodeBlocks(row);
+  enhanceCodeBlocks(row);
   lucide.createIcons();
 }
 
-function highlightCodeBlocks(container) {
-  container.querySelectorAll('pre code').forEach((el) => {
-    hljs.highlightElement(el);
+function enhanceCodeBlocks(container) {
+  container.querySelectorAll('pre code').forEach((codeEl) => {
+    hljs.highlightElement(codeEl);
 
-    // Bouton de copie pour chaque bloc de code
-    const pre = el.parentElement;
-    if (!pre.querySelector('.code-copy-btn')) {
-      const copyBtn = document.createElement('button');
-      copyBtn.className = 'code-copy-btn absolute top-2 right-2 px-2 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-[10px] rounded-md flex items-center gap-1 transition';
-      copyBtn.innerHTML = '<i data-lucide="copy" class="w-3 h-3"></i> Copier';
-      copyBtn.onclick = () => {
-        navigator.clipboard.writeText(el.innerText);
-        copyBtn.innerText = 'Copié !';
-        setTimeout(() => {
-          copyBtn.innerHTML = '<i data-lucide="copy" class="w-3 h-3"></i> Copier';
-          lucide.createIcons();
-        }, 2000);
-      };
-      pre.appendChild(copyBtn);
-    }
+    const pre = codeEl.parentElement;
+    if (pre.parentElement && pre.parentElement.classList.contains('code-block-wrapper')) return;
+
+    // Déterminer le langage
+    let lang = 'code';
+    codeEl.classList.forEach(cls => {
+      if (cls.startsWith('language-')) lang = cls.replace('language-', '');
+    });
+
+    // Créer le wrapper style ChatGPT
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-block-wrapper';
+
+    const header = document.createElement('div');
+    header.className = 'code-block-header';
+    header.innerHTML = `
+      <span>${lang}</span>
+      <button class="code-copy-btn">
+        <i data-lucide="copy" class="w-3 h-3"></i>
+        <span>Copier le code</span>
+      </button>
+    `;
+
+    pre.parentNode.insertBefore(wrapper, pre);
+    wrapper.appendChild(header);
+    wrapper.appendChild(pre);
+
+    const copyBtn = header.querySelector('.code-copy-btn');
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(codeEl.innerText);
+      copyBtn.innerHTML = '<i data-lucide="check" class="w-3 h-3 text-emerald-400"></i><span>Copié !</span>';
+      lucide.createIcons();
+      setTimeout(() => {
+        copyBtn.innerHTML = '<i data-lucide="copy" class="w-3 h-3"></i><span>Copier le code</span>';
+        lucide.createIcons();
+      }, 2000);
+    };
   });
 }
 
@@ -336,7 +352,7 @@ function scrollToBottom() {
 }
 
 // -------------------------------------------------------------
-// ENVOI DE MESSAGE ET STREAMING
+// ENVOI & STREAMING
 // -------------------------------------------------------------
 async function handleSendMessage() {
   const text = DOM.messageInput.value.trim();
@@ -348,15 +364,13 @@ async function handleSendMessage() {
     currentChat = getCurrentConversation();
   }
 
-  // Si premier message, nommer la conversation
   if (currentChat.messages.length === 0) {
-    currentChat.title = text.slice(0, 30) + (text.length > 30 ? '...' : '');
+    currentChat.title = text.slice(0, 28) + (text.length > 28 ? '...' : '');
     renderConversationsList();
   }
 
-  // 1. Ajouter le message utilisateur
-  const userMsg = { role: 'user', content: text };
-  currentChat.messages.push(userMsg);
+  // 1. Message Utilisateur
+  currentChat.messages.push({ role: 'user', content: text });
   saveConversations();
 
   DOM.messageInput.value = '';
@@ -364,24 +378,25 @@ async function handleSendMessage() {
   updateSendButtonState();
   renderMessages();
 
-  // 2. Créer le message assistant vide avec curseur streaming
+  // 2. Message Assistant temporaire avec curseur
   state.isGenerating = true;
   DOM.sendBtn.disabled = true;
 
   const assistantMsg = { role: 'assistant', content: '', webSources: [] };
   currentChat.messages.push(assistantMsg);
 
-  // Élément DOM d'attente
   const assistantRow = document.createElement('div');
-  assistantRow.className = 'flex gap-3 sm:gap-4 justify-start animate-fade-in';
+  assistantRow.className = 'flex justify-start animate-fade-in w-full';
   assistantRow.innerHTML = `
-    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shrink-0 shadow-md">
-      <i data-lucide="bot" class="w-4 h-4 text-white"></i>
-    </div>
-    <div class="flex-1 max-w-[90%] sm:max-w-[85%] space-y-2">
-      <div id="activeWebSources" class="hidden mb-3 p-2.5 rounded-xl bg-slate-800/90 border border-slate-700/60 text-xs text-slate-300"></div>
-      <div class="bg-[#172033] border border-slate-800/80 rounded-2xl rounded-tl-sm p-4 text-slate-200 markdown-body shadow-sm streaming-cursor">
-        <span id="streamingText"></span>
+    <div class="flex gap-4 w-full">
+      <div class="w-7 h-7 rounded-full bg-[#2f2f2f] flex items-center justify-center shrink-0 border border-[#3e3e3e]">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-emerald-400"></i>
+      </div>
+      <div class="flex-1 overflow-hidden space-y-2">
+        <div id="activeWebSources" class="hidden mb-3 p-2.5 rounded-xl bg-[#282828] border border-[#383838] text-xs text-[#d1d1d1]"></div>
+        <div class="assistant-message markdown-body streaming-cursor">
+          <span id="streamingText"></span>
+        </div>
       </div>
     </div>
   `;
@@ -406,9 +421,7 @@ async function handleSendMessage() {
       })
     });
 
-    if (!response.ok) {
-      throw new Error(`Erreur serveur (${response.status})`);
-    }
+    if (!response.ok) throw new Error(`Erreur HTTP ${response.status}`);
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -420,7 +433,7 @@ async function handleSendMessage() {
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
-      buffer = lines.pop(); // Reste non complet
+      buffer = lines.pop();
 
       let eventType = null;
       for (const line of lines) {
@@ -437,14 +450,14 @@ async function handleSendMessage() {
               assistantMsg.webSources = data.results;
               activeWebSourcesDiv.classList.remove('hidden');
               activeWebSourcesDiv.innerHTML = `
-                <div class="flex items-center gap-1.5 font-semibold text-blue-400 mb-2">
+                <div class="flex items-center gap-1.5 font-semibold text-emerald-400 mb-2">
                   <i data-lucide="globe" class="w-3.5 h-3.5"></i>
-                  <span>Sources web trouvées (${data.results.length}) :</span>
+                  <span>Sources web citées (${data.results.length}) :</span>
                 </div>
                 <div class="space-y-1.5">
                   ${data.results.map((s, idx) => `
-                    <a href="${s.url}" target="_blank" rel="noopener noreferrer" class="block hover:underline truncate text-slate-400 hover:text-blue-300">
-                      <span class="font-mono text-[10px] text-blue-400 font-bold">[${idx + 1}]</span> ${escapeHtml(s.title || s.url)}
+                    <a href="${s.url}" target="_blank" rel="noopener noreferrer" class="block hover:underline truncate text-[#a3a3a3] hover:text-emerald-300">
+                      <span class="font-mono text-[10px] text-emerald-400 font-bold">[${idx + 1}]</span> ${escapeHtml(s.title || s.url)}
                     </a>
                   `).join('')}
                 </div>
@@ -459,16 +472,13 @@ async function handleSendMessage() {
               assistantMsg.content += `\n\n> ⚠️ **Erreur** : ${data.message}`;
               streamingTextSpan.innerHTML = marked.parse(assistantMsg.content);
             }
-          } catch (e) {
-            // Ligne de données incomplète ou format non JSON
-          }
+          } catch (e) {}
         }
       }
     }
 
   } catch (err) {
-    console.error('Erreur streaming:', err);
-    assistantMsg.content = `> ⚠️ **Impossible de joindre le service IA** : ${err.message}`;
+    assistantMsg.content = `> ⚠️ **Connexion interrompue** : ${err.message}`;
   } finally {
     DOM.searchIndicator.classList.add('hidden');
     state.isGenerating = false;
@@ -480,26 +490,13 @@ async function handleSendMessage() {
 }
 
 // -------------------------------------------------------------
-// EVENT LISTENERS & UI
+// ÉVÉNEMENTS
 // -------------------------------------------------------------
 function setupEventListeners() {
-  // Sidebar toggles
   DOM.openSidebarBtn.onclick = () => DOM.sidebar.classList.remove('-translate-x-full');
   DOM.closeSidebarBtn.onclick = () => DOM.sidebar.classList.add('-translate-x-full');
-
-  // Nouvelle conversation
   DOM.newChatBtn.onclick = () => createNewConversation();
 
-  // Clear all chats
-  DOM.clearAllChatsBtn.onclick = () => {
-    if (confirm('Voulez-vous supprimer toutes les discussions ?')) {
-      state.conversations = [];
-      localStorage.removeItem('bot_oussamma_chats');
-      createNewConversation();
-    }
-  };
-
-  // Input auto-resize & envoi clavier
   DOM.messageInput.addEventListener('input', () => {
     adjustTextareaHeight();
     updateSendButtonState();
@@ -514,13 +511,11 @@ function setupEventListeners() {
 
   DOM.sendBtn.onclick = handleSendMessage;
 
-  // Web Search Toggle
   DOM.webSearchToggle.onclick = () => {
     state.webSearchEnabled = !state.webSearchEnabled;
     updateWebSearchUI();
   };
 
-  // Modèle dropdown
   DOM.modelSelectorBtn.onclick = () => {
     DOM.modelDropdown.classList.toggle('hidden');
   };
@@ -541,16 +536,14 @@ function setupEventListeners() {
     };
   });
 
-  // Modal Paramètres
   DOM.openSettingsBtn.onclick = openSettings;
   DOM.closeSettingsModal.onclick = closeSettings;
   DOM.cancelSettingsBtn.onclick = closeSettings;
   DOM.saveSettingsBtn.onclick = saveSettings;
 
-  // Clics sur suggestions d'accueil
   document.querySelectorAll('.prompt-suggestion').forEach(btn => {
     btn.onclick = () => {
-      const text = btn.querySelector('p:last-child').textContent;
+      const text = btn.querySelector('p').textContent;
       DOM.messageInput.value = text;
       adjustTextareaHeight();
       updateSendButtonState();
@@ -561,27 +554,27 @@ function setupEventListeners() {
 
 function updateWebSearchUI() {
   if (state.webSearchEnabled) {
-    DOM.webSearchToggle.classList.add('bg-blue-600/30', 'border-blue-500/60', 'text-blue-300');
-    DOM.webSearchToggle.classList.remove('text-slate-400');
-    DOM.webSearchBadge.classList.remove('bg-slate-500');
+    DOM.webSearchToggle.classList.add('bg-emerald-950/60', 'border-emerald-600/50', 'text-emerald-400');
+    DOM.webSearchToggle.classList.remove('text-[#8e8e8e]', 'bg-[#262626]');
+    DOM.webSearchBadge.classList.remove('bg-[#666666]');
     DOM.webSearchBadge.classList.add('bg-emerald-400');
   } else {
-    DOM.webSearchToggle.classList.remove('bg-blue-600/30', 'border-blue-500/60', 'text-blue-300');
-    DOM.webSearchToggle.classList.add('text-slate-400');
-    DOM.webSearchBadge.classList.add('bg-slate-500');
+    DOM.webSearchToggle.classList.remove('bg-emerald-950/60', 'border-emerald-600/50', 'text-emerald-400');
+    DOM.webSearchToggle.classList.add('text-[#8e8e8e]', 'bg-[#262626]');
+    DOM.webSearchBadge.classList.add('bg-[#666666]');
     DOM.webSearchBadge.classList.remove('bg-emerald-400');
   }
 }
 
 function updateModelSelectorLabel() {
   const map = {
-    sso: 'SSO LLM (Défaut)',
+    sso: 'GPT-4o (Codex SSO)',
     openai: 'OpenAI (GPT-4o)',
-    gemini: 'Google Gemini',
+    gemini: 'Gemini 2.0 Flash',
     ollama: 'Ollama Local',
     custom: 'API Custom'
   };
-  DOM.currentModelLabel.textContent = map[state.config.provider] || 'SSO LLM';
+  DOM.currentModelLabel.textContent = map[state.config.provider] || 'GPT-4o (SSO)';
 }
 
 function openSettings() {

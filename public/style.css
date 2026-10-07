@@ -1,7 +1,11 @@
-/* Styles globaux et scrollbar personnalisée */
+/* ============================================================
+   THÈME CHATGPT / GEMINI / OPEN WEBUI - bot.oussamma.tn
+   ============================================================ */
+
+/* Scrollbars discrètes */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -9,38 +13,58 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 
-/* Animations */
+/* Animations d'apparition */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Markdown Styling */
+/* Bulle Utilisateur Style ChatGPT */
+.user-bubble {
+  background-color: #2f2f2f;
+  color: #ececec;
+  border-radius: 1.5rem;
+  padding: 0.75rem 1.15rem;
+  max-width: 80%;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Message Assistant Style ChatGPT / Gemini */
+.assistant-message {
+  color: #ececec;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+
+/* Rendu Typographique Markdown façon ChatGPT */
 .markdown-body {
-  font-size: 0.925rem;
-  line-height: 1.65;
-  color: #e2e8f0;
+  color: #ececec;
+  font-size: 0.9375rem;
+  line-height: 1.7;
 }
 
 .markdown-body p {
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.9rem;
 }
 
 .markdown-body p:last-child {
@@ -51,10 +75,10 @@
 .markdown-body h2,
 .markdown-body h3,
 .markdown-body h4 {
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin-top: 1.25rem;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.5rem;
 }
 
 .markdown-body h1 { font-size: 1.35rem; }
@@ -63,8 +87,8 @@
 
 .markdown-body ul, 
 .markdown-body ol {
-  margin-left: 1.25rem;
-  margin-bottom: 0.85rem;
+  margin-left: 1.5rem;
+  margin-bottom: 0.9rem;
 }
 
 .markdown-body ul {
@@ -76,90 +100,133 @@
 }
 
 .markdown-body li {
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.35rem;
 }
 
-.markdown-body code {
-  background: #1e293b;
-  color: #93c5fd;
+/* Inline Code */
+.markdown-body :not(pre) > code {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #e5e5e5;
   padding: 0.15rem 0.35rem;
   border-radius: 0.375rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.85em;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Blocs de Code Style ChatGPT avec Header */
+.code-block-wrapper {
+  background-color: #0d0d0d;
+  border: 1px solid #2d2d2d;
+  border-radius: 0.625rem;
+  margin: 1rem 0;
+  overflow: hidden;
+}
+
+.code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #171717;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  color: #a3a3a3;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  border-bottom: 1px solid #262626;
+}
+
+.code-copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #a3a3a3;
+  background: transparent;
+  border: none;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: all 0.15s ease;
+}
+
+.code-copy-btn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .markdown-body pre {
-  background: #090d16 !important;
-  border: 1px solid #1e293b;
-  border-radius: 0.75rem;
-  padding: 1rem;
+  margin: 0 !important;
+  padding: 1rem !important;
+  background-color: #0d0d0d !important;
+  border: none !important;
   overflow-x: auto;
-  margin: 0.9rem 0;
-  position: relative;
 }
 
 .markdown-body pre code {
   background: transparent !important;
-  color: #f8fafc;
-  padding: 0;
-  border: none;
+  color: #e5e5e5 !important;
+  padding: 0 !important;
+  border: none !important;
   font-size: 0.825rem;
-  line-height: 1.5;
+  line-height: 1.55;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+/* Citations & Blockquotes */
 .markdown-body blockquote {
-  border-left: 3px solid #3b82f6;
-  padding-left: 0.9rem;
-  color: #94a3b8;
-  font-style: italic;
-  margin: 0.8rem 0;
+  border-left: 3px solid #10a37f;
+  padding-left: 0.85rem;
+  color: #a3a3a3;
+  margin: 0.85rem 0;
 }
 
+/* Tableaux */
 .markdown-body table {
   width: 100%;
   border-collapse: collapse;
   margin: 1rem 0;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .markdown-body th,
 .markdown-body td {
-  border: 1px solid #334155;
+  border: 1px solid #333333;
   padding: 0.5rem 0.75rem;
   text-align: left;
 }
 
 .markdown-body th {
-  background: #1e293b;
+  background: #2a2a2a;
   font-weight: 600;
-  color: #f1f5f9;
+  color: #ffffff;
 }
 
 .markdown-body tr:nth-child(even) {
-  background: rgba(30, 41, 59, 0.4);
+  background: rgba(255, 255, 255, 0.02);
 }
 
+/* Liens */
 .markdown-body a {
-  color: #60a5fa;
+  color: #3b82f6;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 .markdown-body a:hover {
-  color: #93c5fd;
-}
-
-/* Curseur clignotant lors de la génération */
-.streaming-cursor::after {
-  content: '▋';
-  display: inline-block;
   color: #60a5fa;
-  animation: blink 1s infinite;
-  margin-left: 2px;
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+/* Curseur de streaming */
+.streaming-cursor::after {
+  content: '●';
+  display: inline-block;
+  color: #10a37f;
+  animation: pulse 1s infinite;
+  margin-left: 4px;
+  font-size: 0.75rem;
+  vertical-align: middle;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.8); }
 }
