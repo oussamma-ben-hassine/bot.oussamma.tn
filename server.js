@@ -89,12 +89,7 @@ function generateOidcStateAndPKCE() {
 function verifyOidcState(stateParam, sessionState) {
   if (!stateParam) return null;
 
-  // 1. Vérification session locale (si cookie préservé)
-  if (sessionState && stateParam === sessionState) {
-    return { valid: true };
-  }
-
-  // 2. Vérification cryptographique HMAC (si cookie perdu lors de la redirection)
+  // 1. Vérification cryptographique HMAC (robuste même en cas de perte de session)
   if (typeof stateParam === 'string' && stateParam.includes('.')) {
     const [nonce, signature] = stateParam.split('.');
     if (nonce && signature) {
@@ -108,6 +103,11 @@ function verifyOidcState(stateParam, sessionState) {
         }
       } catch (e) {}
     }
+  }
+
+  // 2. Vérification session locale (fallback)
+  if (sessionState && stateParam === sessionState) {
+    return { valid: true };
   }
 
   return null;
