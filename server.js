@@ -492,10 +492,10 @@ app.post('/api/chat', async (req, res) => {
       if (aiResponse.status === 401) {
         req.session = null;
         const sessionExpiredMessage = 
-          `### ⚠️ Votre session SSO a expiré\n\n` +
-          `Votre jeton d'authentification central a expiré ou le serveur SSO a été mis à jour.\n\n` +
-          `👉 [**Cliquez ici pour vous reconnecter au SSO en HTTPS (1 clic)**](https://bot.oussamma.tn/auth/login)\n\n` +
-          `Une fois reconnecté, vos discussions reprendront immédiatement !`;
+          `### ⚠️ Session SSO expirée\n\n` +
+          `Votre jeton de connexion a expiré suite à la mise à jour du SSO.\n\n` +
+          `<a href="https://bot.oussamma.tn/auth/login" style="display:inline-block;padding:10px 20px;margin:8px 0;background:#2563eb;color:#ffffff;border-radius:12px;font-weight:600;text-decoration:none;box-shadow:0 2px 8px rgba(37,99,235,0.3);">🔑 Cliquez ici pour vous reconnecter au SSO (1 clic)</a>\n\n` +
+          `Une fois reconnecté, vous pourrez reprendre vos discussions avec l'IA directement !`;
 
         sendSSE('token', { token: sessionExpiredMessage });
         sendSSE('done', {});

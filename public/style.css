@@ -178,6 +178,27 @@
   color: #ececec;
 }
 
+.markdown-body a {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.markdown-body a:hover {
+  color: #1d4ed8;
+}
+
+.dark .markdown-body a {
+  color: #60a5fa;
+}
+
+.dark .markdown-body a:hover {
+  color: #93c5fd;
+}
+
 .markdown-body p {
   margin-bottom: 0.9rem;
 }
