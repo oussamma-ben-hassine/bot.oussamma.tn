@@ -446,8 +446,8 @@ app.post('/api/chat', async (req, res) => {
 
   let userAccessToken = req.session.access_token;
 
-  // Fonction d'appel au Proxy IA Codex du SSO
-  const callSSOAI = async (token) => {
+  // Fonction d'appel au Proxy IA du SSO (avec support provider openai / openai_codex)
+  const callSSOAI = async (token, providerName = 'openai') => {
     return await fetch(SSO_AI_PROMPT_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -455,7 +455,7 @@ app.post('/api/chat', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        provider: 'openai_codex',
+        provider: providerName,
         model: model || 'gpt-4o',
         prompt: fullPrompt,
       }),
@@ -463,7 +463,16 @@ app.post('/api/chat', async (req, res) => {
   };
 
   try {
-    let aiResponse = await callSSOAI(userAccessToken);
+    // 1. Premier essai avec le provider 'openai' comme spécifié par le SSO
+    let aiResponse = await callSSOAI(userAccessToken, 'openai');
+
+    // Si 400 (ex: provider non reconnu), essayer 'openai_codex'
+    if (aiResponse.status === 400) {
+      const errCheck = await aiResponse.clone().text();
+      if (errCheck.includes('non supporté') || errCheck.includes('not supported')) {
+        aiResponse = await callSSOAI(userAccessToken, 'openai_codex');
+      }
+    }
 
     // 2. Gestion du renouvellement automatique de token (si 401 Unauthorized)
     if (aiResponse.status === 401) {
@@ -473,7 +482,7 @@ app.post('/api/chat', async (req, res) => {
       const newToken = await refreshAccessToken(req);
       if (newToken) {
         userAccessToken = newToken;
-        aiResponse = await callSSOAI(userAccessToken);
+        aiResponse = await callSSOAI(userAccessToken, 'openai');
       } else {
         sendSSE('error', {
           message: 'Votre session SSO a expiré. Veuillez vous reconnecter.',
@@ -484,9 +493,32 @@ app.post('/api/chat', async (req, res) => {
       }
     }
 
+    // 3. Gestion conviviale des erreurs 400, 404, 500 (Vault / Clé manquante)
     if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error('Erreur retournée par le proxy IA SSO:', aiResponse.status, errText);
+      let detailMsg = '';
+      try {
+        const errJson = await aiResponse.json();
+        detailMsg = errJson.detail || errJson.message || '';
+      } catch (e) {
+        detailMsg = await aiResponse.text();
+      }
+
+      console.warn('Réponse d\'erreur du proxy IA SSO:', aiResponse.status, detailMsg);
+
+      if (aiResponse.status === 400 || aiResponse.status === 404 || aiResponse.status === 500) {
+        const friendlyMessage = 
+          `### ⚠️ Configuration de l'accès IA requise\n\n` +
+          `Aucune clé ou session active ChatGPT n'est actuellement liée à votre compte SSO.\n\n` +
+          `${detailMsg ? `> *Détail : ${detailMsg}*\n\n` : ''}` +
+          `Pour activer vos discussions avec l'IA, connectez simplement votre compte :\n\n` +
+          `👉 [**Accéder au Coffre-fort SSO (sso-a.oussamma.tn/dashboard/vault)**](https://sso-a.oussamma.tn/dashboard/vault)\n\n` +
+          `Une fois votre session ou clé ajoutée, vous pourrez discuter directement ici !`;
+
+        sendSSE('token', { token: friendlyMessage });
+        sendSSE('done', {});
+        return res.end();
+      }
+
       throw new Error(`Le proxy IA SSO a répondu avec le statut ${aiResponse.status}`);
     }
 
@@ -497,7 +529,7 @@ app.post('/api/chat', async (req, res) => {
       throw new Error('Réponse vide retournée par le modèle IA.');
     }
 
-    // 3. Streaming fluide des tokens vers le navigateur
+    // 4. Streaming fluide des tokens vers le navigateur
     const tokens = generatedText.split(/(\s+)/);
     for (const chunk of tokens) {
       sendSSE('token', { token: chunk });
