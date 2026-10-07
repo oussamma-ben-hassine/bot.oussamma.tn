@@ -568,7 +568,7 @@ app.post('/api/chat', async (req, res) => {
         return res.end();
       }
 
-      throw new Error(`Le proxy IA SSO a répondu avec le statut ${aiResponse.status}`);
+      throw new Error(`Le proxy IA SSO a répondu avec le statut ${aiResponse.status}${detailMsg ? ` : ${typeof detailMsg === 'string' ? detailMsg : JSON.stringify(detailMsg)}` : ''}`);
     }
 
     const aiData = await aiResponse.json();
