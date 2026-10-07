@@ -31,9 +31,40 @@ Application web moderne d'assistance IA connectée au Single Sign-On (SSO) **sso
 
 ---
 
-## 🚀 Démarrage Rapide
+## 🚀 Déploiement Rapide
 
-### Option A : Déploiement avec Docker (Recommandé)
+### Option A : Déploiement sur Coolify (coolify.oussamma.tn) 🌟
+
+Le projet est optimisé pour **Coolify** (détection automatique Dockerfile, port 3000, et `HEALTHCHECK`).
+
+1. **Sur votre dashboard Coolify** :
+   - Cliquez sur **+ New Resource** > **Public Repository** (ou **Private Repository** lié à votre compte GitHub/GitLab).
+   - Entrez l'URL de votre dépôt Git `bot.oussamma.tn`.
+2. **Configuration dans Coolify** :
+   - **Build Pack** : `Dockerfile` (sélectionné automatiquement).
+   - **Domains** : `https://bot.oussamma.tn` (Coolify configurera automatiquement le certificat SSL Let's Encrypt et le reverse-proxy Traefik).
+   - **Port** : `3000` (détecté via `EXPOSE 3000`).
+   - **Healthcheck Path** : `/health`.
+3. **Variables d'environnement dans Coolify** :
+   Copiez-collez ces variables dans l'onglet **Environment Variables** de Coolify :
+   ```env
+   PORT=3000
+   NODE_ENV=production
+   APP_URL=https://bot.oussamma.tn
+   SSO_BASE_URL=https://sso-a.oussamma.tn
+   SSO_CLIENT_ID=client_bbe0d965db17d39880d411af
+   SSO_CLIENT_SECRET=sec_eLi20e99kRC-hkfqC6LsxV-d4dbYzO2pyCB5g9sCIEA
+   SSO_REDIRECT_URI=https://bot.oussamma.tn/auth/callback
+   SSO_SCOPES=openid profile email
+   SSO_AI_ENDPOINT=https://sso-a.oussamma.tn/api/ai
+   SSO_AI_DEFAULT_MODEL=default-model
+   SESSION_SECRET=bot-oussamma-secret-key-2026-prod
+   ```
+4. Cliquez sur **Deploy** ! 🚀
+
+---
+
+### Option B : Déploiement avec Docker Compose (Serveur VPS)
 
 ```bash
 # 1. Cloner ou naviguer dans le dossier du projet

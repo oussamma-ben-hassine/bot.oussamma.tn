@@ -43,6 +43,11 @@ app.use(
 // Fichiers statiques (Interface Web)
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Healthcheck pour Coolify et orchestrateurs
+app.get(['/health', '/api/health'], (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
 /**
  * -------------------------------------------------------------
  * ROUTES AUTHENTIFICATION SSO
