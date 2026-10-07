@@ -478,6 +478,35 @@ app.post('/api/chat', async (req, res) => {
       }
     }
 
+    // 1b. Jeton ChatGPT/Codex du coffre-fort expiré (ce n'est PAS la session SSO)
+    {
+      let upstreamDetail = '';
+      if (aiResponse.status === 424 || aiResponse.status === 401) {
+        try {
+          const j = await aiResponse.clone().json();
+          upstreamDetail = j.detail || JSON.stringify(j);
+        } catch (e) {
+          upstreamDetail = await aiResponse.clone().text().catch(() => '');
+        }
+      }
+      const isChatGptTokenIssue =
+        aiResponse.status === 424 ||
+        (aiResponse.status === 401 && /ChatGPT|Codex|OpenAI|abonnement/i.test(String(upstreamDetail)));
+      if (isChatGptTokenIssue) {
+        console.error('Jeton ChatGPT du coffre-fort invalide/expiré:', aiResponse.status, upstreamDetail);
+        const msg =
+          `### ⚠️ Jeton ChatGPT expiré\n\n` +
+          `Votre connexion SSO est valide, mais le **jeton ChatGPT enregistré dans votre coffre-fort a expiré**.\n\n` +
+          `> *${upstreamDetail}*\n\n` +
+          `1. Ouvrez [chatgpt.com/api/auth/session](https://chatgpt.com/api/auth/session) (connecté à ChatGPT) et copiez la valeur de \`accessToken\`.\n` +
+          `2. Remplacez-la dans le [**Coffre-fort SSO**](https://sso-a.oussamma.tn/dashboard/vault).\n\n` +
+          `Puis renvoyez votre message.`;
+        sendSSE('token', { token: msg });
+        sendSSE('done', {});
+        return res.end();
+      }
+    }
+
     // 2. Gestion du renouvellement automatique de token (si 401 Unauthorized)
     if (aiResponse.status === 401) {
       console.log('Jeton SSO expiré lors de l\'appel IA, tentative de refresh...');
