@@ -353,17 +353,7 @@ app.get('/api/models/available', async (req, res) => {
   const userAccessToken = req.session?.access_token;
   const configuredModels = [];
 
-  // 1. Toujours proposer GPT-4o (Codex SSO) si un token SSO est présent
-  configuredModels.push({
-    id: 'sso',
-    name: 'GPT-4o (Codex SSO)',
-    description: 'Modèle OpenAI fourni par le SSO',
-    badge: 'SSO',
-    icon: 'sparkles',
-    requiresKey: false,
-  });
-
-  // 2. Interroger le SSO pour savoir quels fournisseurs sont configurés dans le Vault
+  // Interroger le SSO pour savoir quels fournisseurs sont ACTUELLEMENT configurés dans le Vault
   if (userAccessToken) {
     try {
       const vaultRes = await fetch(`${SSO_BASE_URL}/api/v1/vault/providers/configured`, {
@@ -378,15 +368,28 @@ app.get('/api/models/available', async (req, res) => {
         for (const p of providers) {
           const provName = p.provider.toLowerCase();
           if (provName === 'gemini' || provName === 'google') {
-            configuredModels.push({
-              id: 'gemini',
-              name: 'Gemini 3.5 Flash',
-              description: 'Google AI Studio (Superadmin)',
-              badge: 'Google',
-              icon: 'zap',
-              requiresKey: false,
-            });
-          } else if (provName === 'openai' || provName === 'openai_codex') {
+            if (!configuredModels.some(m => m.id === 'gemini')) {
+              configuredModels.push({
+                id: 'gemini',
+                name: 'Gemini 3.5 Flash',
+                description: 'Google AI Studio (Superadmin)',
+                badge: 'Google',
+                icon: 'zap',
+                requiresKey: false,
+              });
+            }
+          } else if (provName === 'openai_codex' || provName === 'codex' || provName === 'sso') {
+            if (!configuredModels.some(m => m.id === 'sso')) {
+              configuredModels.push({
+                id: 'sso',
+                name: 'GPT-4o (Codex SSO)',
+                description: 'Modèle OpenAI fourni par le SSO',
+                badge: 'SSO',
+                icon: 'sparkles',
+                requiresKey: false,
+              });
+            }
+          } else if (provName === 'openai') {
             if (!configuredModels.some(m => m.id === 'openai')) {
               configuredModels.push({
                 id: 'openai',
@@ -405,16 +408,25 @@ app.get('/api/models/available', async (req, res) => {
     }
   }
 
-  // Si Gemini n'a pas pu être interrogé via /configured mais qu'on a déjà testé qu'il est présent
-  if (!configuredModels.some(m => m.id === 'gemini')) {
-    configuredModels.push({
-      id: 'gemini',
-      name: 'Gemini 3.5 Flash',
-      description: 'Google AI Studio (Superadmin)',
-      badge: 'Google',
-      icon: 'zap',
-      requiresKey: false,
-    });
+  // Si aucun modèle n'a pu être récupéré de l'API (ex: appel direct sans provider détecté), vérifier au moins Gemini
+  if (configuredModels.length === 0) {
+    // Si aucun modèle n'est configuré dans le coffre, proposer au moins le modèle actif s'il y en a un
+    // Mais ne jamais forcer un modèle supprimé
+    try {
+      const testGemini = await fetch(`${SSO_BASE_URL}/api/v1/vault/providers/gemini/token`, {
+        headers: { 'Authorization': `Bearer ${userAccessToken}` }
+      });
+      if (testGemini.ok) {
+        configuredModels.push({
+          id: 'gemini',
+          name: 'Gemini 3.5 Flash',
+          description: 'Google AI Studio (Superadmin)',
+          badge: 'Google',
+          icon: 'zap',
+          requiresKey: false,
+        });
+      }
+    } catch (e) {}
   }
 
   res.json({

@@ -132,28 +132,11 @@
             <div class="px-3.5 py-2 text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
               Modèles Disponibles
             </div>
-            <div class="py-1">
-              <button class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 dark:hover:bg-[#2c2c2c] flex items-center justify-between group" data-model="sso">
-                <div class="truncate pr-2">
-                  <div class="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-blue-600 flex items-center gap-1.5 truncate">
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-500 shrink-0"></i>
-                    <span class="truncate">GPT-4o (Codex SSO)</span>
-                  </div>
-                  <div class="text-[10px] text-slate-400 truncate">OpenAI via SSO</div>
-                </div>
-                <span class="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold border border-blue-200 shrink-0">SSO</span>
-              </button>
-
-              <button class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 dark:hover:bg-[#2c2c2c] flex items-center justify-between group" data-model="gemini">
-                <div class="truncate pr-2">
-                  <div class="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-purple-600 flex items-center gap-1.5 truncate">
-                    <i data-lucide="zap" class="w-3.5 h-3.5 text-purple-500 shrink-0"></i>
-                    <span class="truncate">Gemini 3.5 Flash</span>
-                  </div>
-                  <div class="text-[10px] text-slate-400 truncate">Google AI Studio</div>
-                </div>
-                <span class="text-[9px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold border border-purple-200 shrink-0">Google</span>
-              </button>
+            <div id="modelDropdownContent" class="py-1">
+              <div class="px-3.5 py-3 text-xs text-slate-400 text-center flex items-center justify-center gap-2">
+                <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i>
+                <span>Chargement des modèles...</span>
+              </div>
             </div>
           </div>
         </div>
@@ -364,6 +347,6 @@
     </div>
   </div>
 
-  <script src="/app.js?v=2.5"></script>
+  <script src="/app.js?v=2.6"></script>
 </body>
 </html>
