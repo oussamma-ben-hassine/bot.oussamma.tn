@@ -299,9 +299,9 @@ async function refreshAccessToken(req) {
 // MIDDLEWARE DE SÉCURITÉ ABSOLUE : VERROUILLAGE TOTAL
 // =============================================================================
 function requireAuth(req, res, next) {
-  // Chemins exemptés de l'authentification (routes SSO et sondes de santé)
-  const publicPaths = ['/auth/login', '/auth/callback', '/auth/logout', '/health', '/api/health'];
-  if (publicPaths.includes(req.path)) {
+  // Chemins exemptés de l'authentification (routes SSO, sondes de santé et assets statiques)
+  const publicPaths = ['/auth/login', '/auth/callback', '/auth/logout', '/health', '/api/health', '/favicon.ico'];
+  if (publicPaths.includes(req.path) || req.path.startsWith('/assets/')) {
     return next();
   }
 
