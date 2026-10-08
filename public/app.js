@@ -635,7 +635,7 @@ function setupEventListeners() {
     e.stopPropagation();
     DOM.modelDropdown.classList.toggle('hidden');
   };
-  DOM.modelSelectorBtn.onclick = toggleModelDropdown;
+  DOM.modelSelectorBtn.addEventListener('click', toggleModelDropdown);
 
   document.addEventListener('click', (e) => {
     if (DOM.modelDropdown && !DOM.modelSelectorBtn.contains(e.target) && !DOM.modelDropdown.contains(e.target)) {
@@ -643,16 +643,20 @@ function setupEventListeners() {
     }
   });
 
+  const selectModel = (model) => {
+    if (!model) return;
+    state.config.provider = model;
+    saveConfig();
+    updateModelSelectorLabel();
+    DOM.modelDropdown.classList.add('hidden');
+  };
+
   DOM.modelDropdown.querySelectorAll('button[data-model]').forEach(btn => {
-    btn.onclick = (e) => {
+    btn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const model = btn.getAttribute('data-model');
-      state.config.provider = model;
-      saveConfig();
-      updateModelSelectorLabel();
-      DOM.modelDropdown.classList.add('hidden');
-    };
+      selectModel(btn.getAttribute('data-model'));
+    });
   });
 
   DOM.openSettingsBtn.onclick = openSettings;
@@ -693,7 +697,28 @@ function updateModelSelectorLabel() {
     ollama: 'Ollama Local',
     custom: 'API Custom'
   };
-  DOM.currentModelLabel.textContent = map[state.config.provider] || 'GPT-4o (SSO)';
+  const current = state.config.provider || 'sso';
+  DOM.currentModelLabel.textContent = map[current] || 'GPT-4o (SSO)';
+
+  if (DOM.modelDropdown) {
+    DOM.modelDropdown.querySelectorAll('button[data-model]').forEach(btn => {
+      const isSelected = btn.getAttribute('data-model') === current;
+      btn.classList.toggle('bg-slate-100', isSelected);
+      btn.classList.toggle('dark:bg-[#333]', isSelected);
+      
+      let badge = btn.querySelector('.active-check');
+      if (isSelected) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'active-check text-[11px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0';
+          badge.textContent = '✓';
+          btn.appendChild(badge);
+        }
+      } else if (badge) {
+        badge.remove();
+      }
+    });
+  }
 }
 
 function openSettings() {

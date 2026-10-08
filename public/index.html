@@ -112,8 +112,8 @@
   <main class="flex-1 flex flex-col h-full bg-white dark:bg-[#1a1a1a] relative overflow-hidden min-w-0 transition-colors duration-200">
     
     <!-- HEADER BAR ÉPURÉE -->
-    <header class="h-14 border-b border-slate-100 dark:border-[#262626] px-3 sm:px-5 flex items-center justify-between bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur z-20 shrink-0">
-      <div class="flex items-center gap-2 overflow-hidden">
+    <header class="h-14 border-b border-slate-100 dark:border-[#262626] px-3 sm:px-5 flex items-center justify-between bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur z-30 shrink-0 relative">
+      <div class="flex items-center gap-2">
         
         <button id="openSidebarBtn" class="lg:hidden p-2 -ml-1 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#282828] transition">
           <i data-lucide="menu" class="w-5 h-5"></i>
@@ -128,7 +128,7 @@
           </button>
           
           <!-- Dropdown modèles -->
-          <div id="modelDropdown" class="hidden absolute top-full left-0 mt-1.5 w-64 bg-white dark:bg-[#242424] border border-slate-200 dark:border-[#383838] rounded-2xl shadow-xl py-1.5 z-50 divide-y divide-slate-100 dark:divide-[#333]">
+          <div id="modelDropdown" class="hidden absolute top-full left-0 mt-1.5 w-64 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#242424] border border-slate-200 dark:border-[#383838] rounded-2xl shadow-2xl py-1.5 z-50 divide-y divide-slate-100 dark:divide-[#333]">
             <div class="px-3.5 py-2 text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
               Modèles Disponibles
             </div>
@@ -324,9 +324,9 @@
         <div>
           <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Fournisseur d'IA</label>
           <select id="configProvider" class="w-full bg-slate-50 dark:bg-[#282828] border border-slate-200 dark:border-[#3a3a3a] rounded-xl px-3 py-2 text-slate-800 dark:text-white focus:outline-none focus:border-blue-500">
-            <option value="sso">SSO IA (Recommandé - Codex ChatGPT via sso-a.oussamma.tn)</option>
-            <option value="openai">OpenAI Direct (GPT-4o, o1)</option>
-            <option value="gemini">Google Gemini Direct</option>
+            <option value="sso">ChatGPT Plus / Codex SSO (GPT-4o via Coffre SSO)</option>
+            <option value="gemini">Google Gemini (Gemini 2.0 Flash via Coffre SSO)</option>
+            <option value="openai">OpenAI Clé API Directe (GPT-4o, o1)</option>
             <option value="ollama">Ollama Local (http://localhost:11434)</option>
             <option value="custom">API Custom OpenAI-Compatible</option>
           </select>
@@ -373,6 +373,6 @@
     </div>
   </div>
 
-  <script src="/app.js"></script>
+  <script src="/app.js?v=2.2"></script>
 </body>
 </html>
