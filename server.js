@@ -359,7 +359,7 @@ app.get('/api/gemini/credentials', async (req, res) => {
     }
 
     const data = await ssoRes.json();
-    return res.json({ apiKey: data.token, model: 'gemini-flash-latest' });
+    return res.json({ apiKey: data.token, model: 'gemini-3.5-flash' });
   } catch (err) {
     console.error('Erreur récupération clé Gemini:', err);
     return res.status(500).json({ error: 'Erreur lors de la récupération de la clé Gemini' });

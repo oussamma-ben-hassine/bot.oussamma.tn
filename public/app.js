@@ -517,23 +517,36 @@ async function handleSendMessage() {
     }
 
     if (state.config.provider === 'gemini' && geminiDirectKey) {
-      thinkingStatusLabel.textContent = 'Connexion directe Google Gemini...';
-      const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-      const messagesPayload = [
-        { role: 'system', content: state.config.systemPrompt || "Tu es un assistant IA conversationnel moderne et intelligent." },
-        ...currentChat.messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
-      ];
+      thinkingStatusLabel.textContent = 'Connexion directe Google Gemini (gemini-3.5-flash)...';
 
-      const gRes = await fetch(geminiUrl, {
+      // Format des contenus pour Gemini
+      const geminiContents = [];
+      const history = currentChat.messages.slice(0, -1);
+      for (const m of history) {
+        geminiContents.push({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content || '' }]
+        });
+      }
+
+      const geminiPayload = {
+        contents: geminiContents
+      };
+
+      if (state.config.systemPrompt) {
+        geminiPayload.system_instruction = {
+          parts: [{ text: state.config.systemPrompt }]
+        };
+      }
+
+      const geminiStreamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse&key=${geminiDirectKey}`;
+
+      const gRes = await fetch(geminiStreamUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${geminiDirectKey}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          model: 'gemini-flash-latest',
-          messages: messagesPayload
-        })
+        body: JSON.stringify(geminiPayload)
       });
 
       if (!gRes.ok) {
@@ -541,8 +554,43 @@ async function handleSendMessage() {
         throw new Error(`Google API ${gRes.status}: ${errTxt}`);
       }
 
-      const gData = await gRes.json();
-      assistantMsg.content = gData.choices?.[0]?.message?.content || 'Aucune réponse reçue de Google Gemini.';
+      const reader = gRes.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let firstTokenReceived = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.replace('data: ', '').trim());
+              const tokenText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (tokenText) {
+                if (!firstTokenReceived) {
+                  firstTokenReceived = true;
+                  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                  thinkingStatusLabel.textContent = `Pensée achevée en ${elapsed}s`;
+                  clearInterval(timerInterval);
+                }
+                assistantMsg.content += tokenText;
+                streamingTextSpan.innerHTML = marked.parse(assistantMsg.content);
+                scrollToBottom();
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
+      if (!assistantMsg.content) {
+        assistantMsg.content = '*(Aucune réponse textuelle reçue de Gemini)*';
+      }
       return;
     }
 
@@ -739,7 +787,7 @@ function updateModelSelectorLabel() {
   const map = {
     sso: 'GPT-4o (Codex SSO)',
     openai: 'OpenAI (GPT-4o)',
-    gemini: 'Gemini Flash',
+    gemini: 'Gemini 3.5 Flash',
     ollama: 'Ollama Local',
     custom: 'API Custom'
   };
