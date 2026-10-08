@@ -513,7 +513,7 @@ app.get('/api/gemini/credentials', async (req, res) => {
     }
 
     const data = await ssoRes.json();
-    return res.json({ apiKey: data.token, model: 'gemini-3.5-flash' });
+    return res.json({ apiKey: data.token, model: 'gemini-3.8-flash' });
   } catch (err) {
     console.error('Erreur récupération clé Gemini:', err);
     return res.status(500).json({ error: 'Erreur lors de la récupération de la clé Gemini' });
@@ -638,7 +638,7 @@ app.post('/api/chat', async (req, res) => {
   const isGemini = String(model).toLowerCase().includes('gemini');
   const targetProvider = isGemini ? 'gemini' : 'openai_codex';
   const targetModel = isGemini
-    ? (model && model.toLowerCase().startsWith('gemini') && !model.toLowerCase().includes('2.0') && !model.toLowerCase().includes('1.5') ? model : 'gemini-flash-latest')
+    ? 'gemini-3.8-flash'
     : (/^(gpt|o\d|chatgpt)/i.test(model || '') ? model : 'gpt-4o');
 
   sendSSE('status', {

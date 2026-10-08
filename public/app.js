@@ -593,23 +593,10 @@ async function handleSendMessage() {
   const activeAiAvatar = assistantRow.querySelector('#activeAiAvatar');
 
   try {
-    let geminiDirectKey = state.config.apiKey?.trim() || state.geminiApiKey;
-    if (state.config.provider === 'gemini' && !geminiDirectKey) {
-      try {
-        const credRes = await fetch('/api/gemini/credentials');
-        if (credRes.ok) {
-          const credData = await credRes.json();
-          if (credData.apiKey) {
-            geminiDirectKey = credData.apiKey;
-            state.geminiApiKey = geminiDirectKey;
-          }
-        }
-      } catch (e) {
-        console.warn('Impossible de récupérer la clé Gemini depuis le coffre-fort:', e);
-      }
-    }
+    const customUserKey = state.config.apiKey?.trim();
 
-    if (state.config.provider === 'gemini' && geminiDirectKey) {
+    // Si l'utilisateur a configuré manuellement sa propre clé API Gemini dans les réglages
+    if (state.config.provider === 'gemini' && customUserKey) {
       // Format des contenus pour Gemini
       const geminiContents = [];
       const history = currentChat.messages.slice(0, -1);
@@ -630,7 +617,7 @@ async function handleSendMessage() {
         };
       }
 
-      const geminiStreamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse&key=${geminiDirectKey}`;
+      const geminiStreamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse&key=${customUserKey}`;
 
       const gRes = await fetch(geminiStreamUrl, {
         method: 'POST',
@@ -746,7 +733,11 @@ async function handleSendMessage() {
               lucide.createIcons();
             } else if (eventType === 'token') {
               DOM.searchIndicator.classList.add('hidden');
-              
+              if (!firstTokenReceived) {
+                firstTokenReceived = true;
+                const imgEl = activeAiAvatar.querySelector('img');
+                if (imgEl) imgEl.src = '/assets/avatar/avatar-speaking.jpg';
+              }
               assistantMsg.content += data.token;
               streamingTextSpan.innerHTML = marked.parse(assistantMsg.content);
               scrollToBottom();
@@ -759,6 +750,10 @@ async function handleSendMessage() {
       }
     }
 
+  } catch (err) {
+    console.error('Erreur chat assistant:', err);
+    assistantMsg.content = `> ⚠️ **Erreur lors de la communication** : ${err.message || 'Connexion interrompue'}`;
+    streamingTextSpan.innerHTML = marked.parse(assistantMsg.content);
   } finally {
     DOM.searchIndicator.classList.add('hidden');
     state.isGenerating = false;
