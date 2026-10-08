@@ -631,9 +631,15 @@ async function handleSendMessage() {
       }
 
       let gRes;
-      for (const targetGModel of ['gemini-2.0-flash', 'gemini-1.5-flash']) {
-        const geminiStreamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetGModel}:streamGenerateContent?alt=sse&key=${geminiDirectKey}`;
-        gRes = await fetch(geminiStreamUrl, {
+      const candidateEndpoints = [
+        `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${geminiDirectKey}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${geminiDirectKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${geminiDirectKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${geminiDirectKey}`,
+      ];
+
+      for (const endpointUrl of candidateEndpoints) {
+        gRes = await fetch(endpointUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -645,7 +651,44 @@ async function handleSendMessage() {
 
       if (!gRes || !gRes.ok) {
         const errTxt = await gRes?.text().catch(() => '') || '';
-        throw new Error(`Google API ${gRes?.status || 500}: ${errTxt}`);
+        // Diagnostic automatique via ListModels pour identifier le statut exact de la clé Google
+        try {
+          const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiDirectKey}`);
+          const listData = await listRes.json();
+          if (listData.error) {
+            throw new Error(`Clé Google Gemini invalide ou non autorisée : ${listData.error.message || JSON.stringify(listData.error)} (Vérifiez votre clé sur aistudio.google.com/apikey)`);
+          }
+          if (listData.models && Array.isArray(listData.models)) {
+            const validGenerators = listData.models
+              .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
+              .map(m => m.name.replace('models/', ''));
+            if (validGenerators.length > 0) {
+              // Tentative immédiate avec le premier modèle valide retourné par Google pour cette clé
+              const firstValid = validGenerators.find(n => n.includes('flash')) || validGenerators[0];
+              const autoRetryUrl = `https://generativelanguage.googleapis.com/v1beta/models/${firstValid}:streamGenerateContent?alt=sse&key=${geminiDirectKey}`;
+              const autoRes = await fetch(autoRetryUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(geminiPayload)
+              });
+              if (autoRes.ok) {
+                gRes = autoRes;
+              } else {
+                throw new Error(`Modèles disponibles pour votre clé : ${validGenerators.slice(0, 5).join(', ')}, mais la requête a échoué (${autoRes.status}).`);
+              }
+            } else {
+              throw new Error("Votre clé Google API n'a aucun modèle autorisé pour generateContent. Créez une nouvelle clé sur https://aistudio.google.com/apikey");
+            }
+          }
+        } catch (diagErr) {
+          if (diagErr.message.includes('Clé Google') || diagErr.message.includes('Modèles disponibles') || diagErr.message.includes('aistudio.google.com')) {
+            throw diagErr;
+          }
+        }
+
+        if (!gRes || !gRes.ok) {
+          throw new Error(`Google API ${gRes?.status || 500}: ${errTxt}`);
+        }
       }
 
       const reader = gRes.body.getReader();
