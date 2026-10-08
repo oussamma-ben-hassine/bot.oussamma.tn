@@ -630,18 +630,23 @@ function setupEventListeners() {
     updateWebSearchUI();
   };
 
-  DOM.modelSelectorBtn.onclick = () => {
+  const toggleModelDropdown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     DOM.modelDropdown.classList.toggle('hidden');
   };
+  DOM.modelSelectorBtn.onclick = toggleModelDropdown;
 
   document.addEventListener('click', (e) => {
-    if (!DOM.modelSelectorBtn.contains(e.target) && !DOM.modelDropdown.contains(e.target)) {
+    if (DOM.modelDropdown && !DOM.modelSelectorBtn.contains(e.target) && !DOM.modelDropdown.contains(e.target)) {
       DOM.modelDropdown.classList.add('hidden');
     }
   });
 
   DOM.modelDropdown.querySelectorAll('button[data-model]').forEach(btn => {
-    btn.onclick = () => {
+    btn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const model = btn.getAttribute('data-model');
       state.config.provider = model;
       saveConfig();
