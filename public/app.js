@@ -185,6 +185,20 @@ async function checkAuthStatus() {
         DOM.userAvatar.textContent = initial;
       }
 
+      // Gestion de la visibilité des paramètres IA (Réservé au Superadmin)
+      const isSuperAdmin = Boolean(data.user.is_superadmin);
+      if (DOM.openSettingsBtn) {
+        if (isSuperAdmin) {
+          DOM.openSettingsBtn.classList.remove('hidden');
+          DOM.openSettingsBtn.title = 'Paramètres IA (Superadmin)';
+        } else {
+          DOM.openSettingsBtn.classList.add('hidden');
+        }
+      }
+
+      // Charger les modèles configurés par le Superadmin
+      await loadAvailableModels(isSuperAdmin);
+
       DOM.authBtn.title = 'Déconnexion SSO';
       DOM.authBtn.innerHTML = `<i data-lucide="log-out" class="w-4 h-4 text-slate-400 hover:text-red-500"></i>`;
       DOM.authBtn.onclick = () => window.location.href = '/auth/logout';
@@ -195,6 +209,91 @@ async function checkAuthStatus() {
   } catch (e) {
     console.error('Erreur vérification SSO:', e);
   }
+}
+
+// -------------------------------------------------------------
+// CHARGEMENT DYNAMIQUE DES MODÈLES CONFIGURÉS PAR LE SUPERADMIN
+// -------------------------------------------------------------
+async function loadAvailableModels(isSuperAdmin = false) {
+  try {
+    const res = await fetch('/api/models/available');
+    if (!res.ok) return;
+    const data = await res.json();
+    const availableModels = data.models || [];
+
+    if (availableModels.length === 0) return;
+
+    state.availableModels = availableModels;
+
+    // Si le provider actuel n'est pas dans la liste des modèles configurés, basculer sur le premier
+    const exists = availableModels.some(m => m.id === state.config.provider);
+    if (!exists) {
+      state.config.provider = availableModels[0].id;
+      saveConfig();
+    }
+
+    renderModelDropdown(availableModels);
+    updateModelSelectorLabel();
+  } catch (err) {
+    console.warn('Erreur chargement modèles disponibles:', err);
+  }
+}
+
+function renderModelDropdown(models) {
+  if (!DOM.modelDropdown) return;
+
+  const current = state.config.provider || 'sso';
+
+  let html = `
+    <div class="px-3.5 py-2 text-[10px] text-slate-400 font-semibold uppercase tracking-wider flex items-center justify-between">
+      <span>Modèles Configurés</span>
+      <span class="text-[9px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-md font-semibold">Par Superadmin</span>
+    </div>
+    <div class="py-1">
+  `;
+
+  for (const m of models) {
+    const isSelected = m.id === current;
+    const badgeColor = m.id === 'gemini' 
+      ? 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300'
+      : 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300';
+
+    html += `
+      <button class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 dark:hover:bg-[#2c2c2c] flex items-center justify-between group transition ${isSelected ? 'bg-slate-100 dark:bg-[#2c2c2c]' : ''}" data-model="${m.id}">
+        <div class="truncate pr-2">
+          <div class="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-blue-600 flex items-center gap-1.5 truncate">
+            <i data-lucide="${m.icon || 'sparkles'}" class="w-3.5 h-3.5 ${m.id === 'gemini' ? 'text-purple-500' : 'text-blue-500'} shrink-0"></i>
+            <span class="truncate">${m.name}</span>
+          </div>
+          <div class="text-[10px] text-slate-400 truncate">${m.description || ''}</div>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <span class="text-[9px] ${badgeColor} px-1.5 py-0.5 rounded-full font-semibold border">${m.badge || 'Prêt'}</span>
+          ${isSelected ? '<span class="active-check text-[11px] font-bold text-emerald-600 dark:text-emerald-400 ml-1">✓</span>' : ''}
+        </div>
+      </button>
+    `;
+  }
+
+  html += `</div>`;
+  DOM.modelDropdown.innerHTML = html;
+
+  DOM.modelDropdown.querySelectorAll('button[data-model]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const selectedId = btn.getAttribute('data-model');
+      if (selectedId) {
+        state.config.provider = selectedId;
+        saveConfig();
+        renderModelDropdown(state.availableModels || models);
+        updateModelSelectorLabel();
+        DOM.modelDropdown.classList.add('hidden');
+      }
+    });
+  });
+
+  lucide.createIcons();
 }
 
 // -------------------------------------------------------------
@@ -784,15 +883,18 @@ function updateWebSearchUI() {
 }
 
 function updateModelSelectorLabel() {
-  const map = {
-    sso: 'GPT-4o (Codex SSO)',
-    openai: 'OpenAI (GPT-4o)',
-    gemini: 'Gemini 3.5 Flash',
-    ollama: 'Ollama Local',
-    custom: 'API Custom'
-  };
   const current = state.config.provider || 'sso';
-  DOM.currentModelLabel.textContent = map[current] || 'GPT-4o (SSO)';
+  
+  if (state.availableModels && state.availableModels.length > 0) {
+    const found = state.availableModels.find(m => m.id === current);
+    if (found) {
+      DOM.currentModelLabel.textContent = found.name;
+    } else {
+      DOM.currentModelLabel.textContent = current === 'gemini' ? 'Gemini 3.5 Flash' : 'GPT-4o (Codex SSO)';
+    }
+  } else {
+    DOM.currentModelLabel.textContent = current === 'gemini' ? 'Gemini 3.5 Flash' : 'GPT-4o (Codex SSO)';
+  }
 
   if (DOM.modelDropdown) {
     DOM.modelDropdown.querySelectorAll('button[data-model]').forEach(btn => {

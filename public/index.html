@@ -134,34 +134,25 @@
             </div>
             <div class="py-1">
               <button class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 dark:hover:bg-[#2c2c2c] flex items-center justify-between group" data-model="sso">
-                <div>
-                  <div class="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-blue-600 flex items-center gap-1.5">
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-500"></i>
-                    GPT-4o (SSO Codex)
+                <div class="truncate pr-2">
+                  <div class="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-blue-600 flex items-center gap-1.5 truncate">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-blue-500 shrink-0"></i>
+                    <span class="truncate">GPT-4o (Codex SSO)</span>
                   </div>
-                  <div class="text-[10px] text-slate-400">Compte ChatGPT lié au SSO</div>
+                  <div class="text-[10px] text-slate-400 truncate">OpenAI via SSO</div>
                 </div>
-                <span class="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold border border-blue-200">Défaut</span>
+                <span class="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold border border-blue-200 shrink-0">SSO</span>
               </button>
 
               <button class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 dark:hover:bg-[#2c2c2c] flex items-center justify-between group" data-model="gemini">
-                <div>
-                  <div class="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-purple-600 flex items-center gap-1.5">
-                    <i data-lucide="gem" class="w-3.5 h-3.5 text-purple-500"></i>
-                    Gemini Flash
+                <div class="truncate pr-2">
+                  <div class="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-purple-600 flex items-center gap-1.5 truncate">
+                    <i data-lucide="zap" class="w-3.5 h-3.5 text-purple-500 shrink-0"></i>
+                    <span class="truncate">Gemini 3.5 Flash</span>
                   </div>
-                  <div class="text-[10px] text-slate-400">Google AI Studio (Dernière version)</div>
+                  <div class="text-[10px] text-slate-400 truncate">Google AI Studio</div>
                 </div>
-              </button>
-
-              <button class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 dark:hover:bg-[#2c2c2c] flex items-center justify-between group" data-model="ollama">
-                <div>
-                  <div class="text-xs font-semibold text-slate-800 dark:text-white group-hover:text-amber-600 flex items-center gap-1.5">
-                    <i data-lucide="terminal" class="w-3.5 h-3.5 text-amber-500"></i>
-                    Modèle Local (Ollama)
-                  </div>
-                  <div class="text-[10px] text-slate-400">Auto-hébergé</div>
-                </div>
+                <span class="text-[9px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-full font-semibold border border-purple-200 shrink-0">Google</span>
               </button>
             </div>
           </div>
@@ -373,6 +364,6 @@
     </div>
   </div>
 
-  <script src="/app.js?v=2.4"></script>
+  <script src="/app.js?v=2.5"></script>
 </body>
 </html>

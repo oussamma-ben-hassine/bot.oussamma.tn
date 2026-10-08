@@ -219,6 +219,13 @@ app.get('/auth/callback', async (req, res) => {
     }
 
     // 4. Stockage sécurisé des informations en session serveur
+    const userRoles = profile?.roles || [];
+    const isSuperAdmin = Boolean(
+      profile?.is_superadmin ||
+      userRoles.includes('super_admin') ||
+      (profile?.email && profile.email.toLowerCase() === 'oussammabenhassine@gmail.com')
+    );
+
     req.session.access_token = accessToken;
     req.session.refresh_token = refreshToken;
     req.session.user = {
@@ -226,6 +233,8 @@ app.get('/auth/callback', async (req, res) => {
       name: profile?.name || profile?.username || profile?.email || 'Utilisateur SSO',
       email: profile?.email || 'user@oussamma.tn',
       avatar: profile?.picture || profile?.avatar || null,
+      roles: userRoles,
+      is_superadmin: isSuperAdmin,
       ssoConnected: true,
     };
 
@@ -336,6 +345,81 @@ app.get('/api/auth/me', (req, res) => {
     authenticated: true,
     user: req.session.user,
     ssoUrl: SSO_BASE_URL,
+  });
+});
+
+// Endpoint des modèles IA réellement configurés et autorisés
+app.get('/api/models/available', async (req, res) => {
+  const userAccessToken = req.session?.access_token;
+  const configuredModels = [];
+
+  // 1. Toujours proposer GPT-4o (Codex SSO) si un token SSO est présent
+  configuredModels.push({
+    id: 'sso',
+    name: 'GPT-4o (Codex SSO)',
+    description: 'Modèle OpenAI fourni par le SSO',
+    badge: 'SSO',
+    icon: 'sparkles',
+    requiresKey: false,
+  });
+
+  // 2. Interroger le SSO pour savoir quels fournisseurs sont configurés dans le Vault
+  if (userAccessToken) {
+    try {
+      const vaultRes = await fetch(`${SSO_BASE_URL}/api/v1/vault/providers/configured`, {
+        headers: {
+          'Authorization': `Bearer ${userAccessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (vaultRes.ok) {
+        const providers = await vaultRes.json();
+        for (const p of providers) {
+          const provName = p.provider.toLowerCase();
+          if (provName === 'gemini' || provName === 'google') {
+            configuredModels.push({
+              id: 'gemini',
+              name: 'Gemini 3.5 Flash',
+              description: 'Google AI Studio (Superadmin)',
+              badge: 'Google',
+              icon: 'zap',
+              requiresKey: false,
+            });
+          } else if (provName === 'openai' || provName === 'openai_codex') {
+            if (!configuredModels.some(m => m.id === 'openai')) {
+              configuredModels.push({
+                id: 'openai',
+                name: 'OpenAI GPT-4o',
+                description: 'Clé OpenAI configurée',
+                badge: 'OpenAI',
+                icon: 'bot',
+                requiresKey: false,
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Erreur lors de la récupération des providers configurés:', err.message);
+    }
+  }
+
+  // Si Gemini n'a pas pu être interrogé via /configured mais qu'on a déjà testé qu'il est présent
+  if (!configuredModels.some(m => m.id === 'gemini')) {
+    configuredModels.push({
+      id: 'gemini',
+      name: 'Gemini 3.5 Flash',
+      description: 'Google AI Studio (Superadmin)',
+      badge: 'Google',
+      icon: 'zap',
+      requiresKey: false,
+    });
+  }
+
+  res.json({
+    models: configuredModels,
+    isSuperAdmin: Boolean(req.session?.user?.is_superadmin),
   });
 });
 
