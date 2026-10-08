@@ -593,10 +593,23 @@ async function handleSendMessage() {
   const activeAiAvatar = assistantRow.querySelector('#activeAiAvatar');
 
   try {
-    const customUserKey = state.config.apiKey?.trim();
+    let geminiDirectKey = state.config.apiKey?.trim() || state.geminiApiKey;
+    if (state.config.provider === 'gemini' && !geminiDirectKey) {
+      try {
+        const credRes = await fetch('/api/gemini/credentials');
+        if (credRes.ok) {
+          const credData = await credRes.json();
+          if (credData.apiKey) {
+            geminiDirectKey = credData.apiKey;
+            state.geminiApiKey = geminiDirectKey;
+          }
+        }
+      } catch (e) {
+        console.warn('Impossible de récupérer la clé Gemini depuis le coffre-fort:', e);
+      }
+    }
 
-    // Si l'utilisateur a configuré manuellement sa propre clé API Gemini dans les réglages
-    if (state.config.provider === 'gemini' && customUserKey) {
+    if (state.config.provider === 'gemini' && geminiDirectKey) {
       // Format des contenus pour Gemini
       const geminiContents = [];
       const history = currentChat.messages.slice(0, -1);
@@ -617,7 +630,7 @@ async function handleSendMessage() {
         };
       }
 
-      const geminiStreamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse&key=${customUserKey}`;
+      const geminiStreamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse&key=${geminiDirectKey}`;
 
       const gRes = await fetch(geminiStreamUrl, {
         method: 'POST',
