@@ -544,32 +544,20 @@ async function handleSendMessage() {
   assistantRow.className = 'flex justify-start animate-fade-in w-full';
   assistantRow.innerHTML = `
     <div class="flex gap-3 sm:gap-4 w-full">
-      <!-- Avatar IA Réactif avec halo pulsant -->
-      <div id="activeAiAvatar" class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs ai-thinking-avatar">
-        <i data-lucide="sparkles" class="w-4 h-4 animate-spin"></i>
+      <div id="activeAiAvatar" class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+        <i data-lucide="sparkles" class="w-4 h-4"></i>
       </div>
       <div class="flex-1 overflow-hidden space-y-2">
-        
-        <!-- Accordéon Dynamique de Réflexion (Thinking Process) -->
-        <div id="thinkingBox" class="thinking-box">
-          <div class="thinking-header" id="thinkingToggle">
-            <span class="flex items-center gap-1.5 font-semibold text-blue-600 dark:text-blue-400">
-              <i data-lucide="brain-circuit" class="w-3.5 h-3.5 animate-pulse"></i>
-              <span id="thinkingStatusLabel">L'IA réfléchit en direct...</span>
-            </span>
-            <span id="thinkingTimer" class="font-mono text-[10px] text-slate-400">0.0s</span>
-          </div>
-          <div id="thinkingSteps" class="thinking-steps space-y-1">
-            <div class="text-blue-500">▶ Connexion au SSO sso-a.oussamma.tn</div>
-            <div id="stepWeb" class="hidden text-purple-500">▶ Recherche et analyse des données Web en direct</div>
-            <div id="stepLLM" class="text-slate-400">▶ Synthèse et génération du modèle GPT-4o Codex</div>
-          </div>
-        </div>
-
         <div id="activeWebSources" class="hidden mb-3 p-3 rounded-2xl bg-blue-50/70 dark:bg-[#242424] border border-blue-100 dark:border-[#383838] text-xs text-slate-700 dark:text-[#d1d1d1]"></div>
         
-        <div class="assistant-message markdown-body streaming-cursor">
-          <span id="streamingText"></span>
+        <div class="assistant-message markdown-body">
+          <span id="streamingText">
+            <span class="typing-dots">
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+              <span class="typing-dot"></span>
+            </span>
+          </span>
         </div>
       </div>
     </div>
@@ -582,21 +570,6 @@ async function handleSendMessage() {
   const activeWebSourcesDiv = assistantRow.querySelector('#activeWebSources');
   const markdownContainer = assistantRow.querySelector('.markdown-body');
   const activeAiAvatar = assistantRow.querySelector('#activeAiAvatar');
-  const thinkingBox = assistantRow.querySelector('#thinkingBox');
-  const thinkingStatusLabel = assistantRow.querySelector('#thinkingStatusLabel');
-  const thinkingTimer = assistantRow.querySelector('#thinkingTimer');
-  const stepWeb = assistantRow.querySelector('#stepWeb');
-
-  if (state.webSearchEnabled) {
-    stepWeb.classList.remove('hidden');
-  }
-
-  // Chronomètre de réflexion en direct
-  const startTime = Date.now();
-  const timerInterval = setInterval(() => {
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    thinkingTimer.textContent = `${elapsed}s`;
-  }, 100);
 
   try {
     let geminiDirectKey = state.config.apiKey?.trim() || state.geminiApiKey;
@@ -616,8 +589,6 @@ async function handleSendMessage() {
     }
 
     if (state.config.provider === 'gemini' && geminiDirectKey) {
-      thinkingStatusLabel.textContent = 'Connexion directe Google Gemini (gemini-3.5-flash)...';
-
       // Format des contenus pour Gemini
       const geminiContents = [];
       const history = currentChat.messages.slice(0, -1);
@@ -672,12 +643,6 @@ async function handleSendMessage() {
               const data = JSON.parse(line.replace('data: ', '').trim());
               const tokenText = data.candidates?.[0]?.content?.parts?.[0]?.text;
               if (tokenText) {
-                if (!firstTokenReceived) {
-                  firstTokenReceived = true;
-                  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                  thinkingStatusLabel.textContent = `Pensée achevée en ${elapsed}s`;
-                  clearInterval(timerInterval);
-                }
                 assistantMsg.content += tokenText;
                 streamingTextSpan.innerHTML = marked.parse(assistantMsg.content);
                 scrollToBottom();
@@ -756,13 +721,6 @@ async function handleSendMessage() {
             } else if (eventType === 'token') {
               DOM.searchIndicator.classList.add('hidden');
               
-              if (!firstTokenReceived) {
-                firstTokenReceived = true;
-                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                thinkingStatusLabel.textContent = `Pensée achevée en ${elapsed}s`;
-                clearInterval(timerInterval);
-              }
-
               assistantMsg.content += data.token;
               streamingTextSpan.innerHTML = marked.parse(assistantMsg.content);
               scrollToBottom();
@@ -778,10 +736,8 @@ async function handleSendMessage() {
   } catch (err) {
     assistantMsg.content = `> ⚠️ **Connexion interrompue** : ${err.message}`;
   } finally {
-    clearInterval(timerInterval);
     DOM.searchIndicator.classList.add('hidden');
     state.isGenerating = false;
-    activeAiAvatar.classList.remove('ai-thinking-avatar');
     activeAiAvatar.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4"></i>`;
     markdownContainer.classList.remove('streaming-cursor');
     saveConversations();
