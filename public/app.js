@@ -500,6 +500,52 @@ async function handleSendMessage() {
   }, 100);
 
   try {
+    let geminiDirectKey = state.config.apiKey?.trim() || state.geminiApiKey;
+    if (state.config.provider === 'gemini' && !geminiDirectKey) {
+      try {
+        const credRes = await fetch('/api/gemini/credentials');
+        if (credRes.ok) {
+          const credData = await credRes.json();
+          if (credData.apiKey) {
+            geminiDirectKey = credData.apiKey;
+            state.geminiApiKey = geminiDirectKey;
+          }
+        }
+      } catch (e) {
+        console.warn('Impossible de récupérer la clé Gemini depuis le coffre-fort:', e);
+      }
+    }
+
+    if (state.config.provider === 'gemini' && geminiDirectKey) {
+      thinkingStatusLabel.textContent = 'Connexion directe Google Gemini...';
+      const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+      const messagesPayload = [
+        { role: 'system', content: state.config.systemPrompt || "Tu es un assistant IA conversationnel moderne et intelligent." },
+        ...currentChat.messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
+      ];
+
+      const gRes = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${geminiDirectKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gemini-flash-latest',
+          messages: messagesPayload
+        })
+      });
+
+      if (!gRes.ok) {
+        const errTxt = await gRes.text().catch(() => '');
+        throw new Error(`Google API ${gRes.status}: ${errTxt}`);
+      }
+
+      const gData = await gRes.json();
+      assistantMsg.content = gData.choices?.[0]?.message?.content || 'Aucune réponse reçue de Google Gemini.';
+      return;
+    }
+
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

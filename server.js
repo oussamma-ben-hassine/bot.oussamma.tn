@@ -339,6 +339,33 @@ app.get('/api/auth/me', (req, res) => {
   });
 });
 
+// Endpoint récupération clé Gemini du coffre-fort pour appel direct client (évite le blocage IP datacenter)
+app.get('/api/gemini/credentials', async (req, res) => {
+  const userAccessToken = req.session?.access_token;
+  if (!userAccessToken) {
+    return res.status(401).json({ error: 'Non authentifié auprès du SSO' });
+  }
+
+  try {
+    const ssoRes = await fetch(`${SSO_BASE_URL}/api/v1/vault/providers/gemini/token`, {
+      headers: {
+        'Authorization': `Bearer ${userAccessToken}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!ssoRes.ok) {
+      return res.status(ssoRes.status).json({ error: 'Aucune clé Gemini active dans votre coffre-fort' });
+    }
+
+    const data = await ssoRes.json();
+    return res.json({ apiKey: data.token, model: 'gemini-flash-latest' });
+  } catch (err) {
+    console.error('Erreur récupération clé Gemini:', err);
+    return res.status(500).json({ error: 'Erreur lors de la récupération de la clé Gemini' });
+  }
+});
+
 // =============================================================================
 // RECHERCHE WEB EN TEMPS RÉEL (DUCKDUCKGO API)
 // =============================================================================
