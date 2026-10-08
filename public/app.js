@@ -443,8 +443,9 @@ function appendMessageToDOM(msg) {
 
     row.innerHTML = `
       <div class="flex gap-3 sm:gap-4 w-full">
-        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-          <i data-lucide="sparkles" class="w-4 h-4"></i>
+        <div class="relative w-8 h-8 rounded-full shrink-0 shadow-xs ring-2 ring-blue-500/20">
+          <img src="/assets/avatar/avatar-happy.jpg" alt="Oussama IA" class="w-full h-full rounded-full object-cover">
+          <span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-white dark:border-[#1a1a1a]"></span>
         </div>
         <div class="flex-1 overflow-hidden space-y-2">
           ${sourcesHtml}
@@ -563,8 +564,9 @@ async function handleSendMessage() {
   assistantRow.className = 'flex justify-start animate-fade-in w-full';
   assistantRow.innerHTML = `
     <div class="flex gap-3 sm:gap-4 w-full">
-      <div id="activeAiAvatar" class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-        <i data-lucide="sparkles" class="w-4 h-4"></i>
+      <div id="activeAiAvatar" class="relative w-8 h-8 rounded-full shrink-0 shadow-xs ring-2 ring-blue-500/40 animate-pulse">
+        <img src="/assets/avatar/avatar-thinking.jpg" alt="Oussama IA" class="w-full h-full rounded-full object-cover">
+        <span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-blue-500 border border-white dark:border-[#1a1a1a]"></span>
       </div>
       <div class="flex-1 overflow-hidden space-y-2">
         <div id="activeWebSources" class="hidden mb-3 p-3 rounded-2xl bg-blue-50/70 dark:bg-[#242424] border border-blue-100 dark:border-[#383838] text-xs text-slate-700 dark:text-[#d1d1d1]"></div>
@@ -662,6 +664,11 @@ async function handleSendMessage() {
               const data = JSON.parse(line.replace('data: ', '').trim());
               const tokenText = data.candidates?.[0]?.content?.parts?.[0]?.text;
               if (tokenText) {
+                if (!firstTokenReceived) {
+                  firstTokenReceived = true;
+                  const imgEl = activeAiAvatar.querySelector('img');
+                  if (imgEl) imgEl.src = '/assets/avatar/avatar-speaking.jpg';
+                }
                 assistantMsg.content += tokenText;
                 streamingTextSpan.innerHTML = marked.parse(assistantMsg.content);
                 scrollToBottom();
@@ -752,12 +759,12 @@ async function handleSendMessage() {
       }
     }
 
-  } catch (err) {
-    assistantMsg.content = `> ⚠️ **Connexion interrompue** : ${err.message}`;
   } finally {
     DOM.searchIndicator.classList.add('hidden');
     state.isGenerating = false;
-    activeAiAvatar.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4"></i>`;
+    const imgEl = activeAiAvatar.querySelector('img');
+    if (imgEl) imgEl.src = '/assets/avatar/avatar-happy.jpg';
+    activeAiAvatar.classList.remove('animate-pulse');
     markdownContainer.classList.remove('streaming-cursor');
     saveConversations();
     renderMessages();

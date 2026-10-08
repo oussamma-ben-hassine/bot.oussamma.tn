@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
   <title>Bot Oussama — Assistant IA & Recherche Web</title>
+  <link rel="icon" type="image/jpeg" href="/assets/avatar/avatar-icon.jpg">
   
   <!-- Polices Google : Inter & Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -59,8 +60,8 @@
     <div class="p-3.5 flex items-center justify-between gap-1 border-b border-slate-200/70 dark:border-[#262626]">
       <button id="newChatBtn" class="flex-1 py-2 px-3 rounded-xl bg-white dark:bg-[#1f1f1f] hover:bg-slate-100 dark:hover:bg-[#282828] text-slate-800 dark:text-white border border-slate-200 dark:border-[#333] flex items-center justify-between text-xs font-semibold shadow-xs transition group">
         <div class="flex items-center gap-2">
-          <div class="w-6 h-6 rounded-lg bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-xs">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          <div class="w-6 h-6 rounded-lg overflow-hidden shrink-0 shadow-xs ring-1 ring-blue-500/30">
+            <img src="/assets/avatar/avatar-icon.jpg" alt="IA" class="w-full h-full object-cover">
           </div>
           <span>Nouveau chat</span>
         </div>
@@ -164,22 +165,22 @@
     <!-- ZONE DE CHAT SCROLLABLE & RESPONSIVE -->
     <div id="chatMessages" class="flex-1 overflow-y-auto px-3 sm:px-6 py-5 sm:py-8 max-w-3xl w-full mx-auto custom-scrollbar space-y-6">
       
-      <!-- ÉCRAN D'ACCUEIL LUMINEUX & DYNAMIQUE -->
+      <!-- ÉCRAN D'ACCUEIL AVEC AVATAR OFFICIEL OUSSAMA IA -->
       <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center my-auto px-2 py-6 sm:py-8">
         
-        <!-- Orbe IA Vivant (Pulsant avec dégradé iridescent) -->
+        <!-- Badge Avatar & Titre Chaleureux -->
         <div class="relative mb-5 flex items-center justify-center">
-          <div class="ai-orb-glow"></div>
-          <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white relative z-10">
-            <i data-lucide="sparkles" class="w-7 h-7"></i>
+          <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1 bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 shadow-xl shadow-blue-500/20 relative">
+            <img src="/assets/avatar/avatar-neutral.jpg" alt="Oussama IA" class="w-full h-full rounded-full object-cover">
+            <span class="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#1a1a1a]" title="En ligne"></span>
           </div>
         </div>
 
-        <h1 class="text-2xl sm:text-4xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight font-display">
-          Bonjour, <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Oussama</span>
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1.5 tracking-tight font-display">
+          Salut ! Je suis <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Oussama</span>
         </h1>
-        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-8 px-4">
-          Comment puis-je vous assister aujourd'hui ?
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 px-4">
+          Votre assistant IA personnel. Que souhaitez-vous développer ou explorer aujourd'hui ?
         </p>
 
         <!-- Cartes de suggestions modernes sur fond clair -->
@@ -448,6 +449,6 @@
     </div>
   </div>
 
-  <script src="/app.js?v=2.7"></script>
+  <script src="/app.js?v=2.8"></script>
 </body>
 </html>
