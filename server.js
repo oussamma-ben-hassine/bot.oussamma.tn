@@ -457,7 +457,7 @@ app.post('/api/chat', async (req, res) => {
   const isGemini = String(model).toLowerCase().includes('gemini');
   const targetProvider = isGemini ? 'gemini' : 'openai_codex';
   const targetModel = isGemini
-    ? (model && model.toLowerCase().startsWith('gemini') ? model : 'gemini-2.0-flash')
+    ? (model && model.toLowerCase().startsWith('gemini') && !model.toLowerCase().includes('2.0') && !model.toLowerCase().includes('1.5') ? model : 'gemini-flash-latest')
     : (/^(gpt|o\d|chatgpt)/i.test(model || '') ? model : 'gpt-4o');
 
   sendSSE('status', {

@@ -693,7 +693,7 @@ function updateModelSelectorLabel() {
   const map = {
     sso: 'GPT-4o (Codex SSO)',
     openai: 'OpenAI (GPT-4o)',
-    gemini: 'Gemini 2.0 Flash',
+    gemini: 'Gemini Flash',
     ollama: 'Ollama Local',
     custom: 'API Custom'
   };
