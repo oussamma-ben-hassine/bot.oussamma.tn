@@ -58,7 +58,17 @@ const DOM = {
   configModel: document.getElementById('configModel'),
   configApiKey: document.getElementById('configApiKey'),
   configSystemPrompt: document.getElementById('configSystemPrompt'),
-  configDefaultWebSearch: document.getElementById('configDefaultWebSearch')
+  configDefaultWebSearch: document.getElementById('configDefaultWebSearch'),
+  openMonitoringBtn: document.getElementById('openMonitoringBtn'),
+  closeMonitoringModal: document.getElementById('closeMonitoringModal'),
+  closeMonitoringFooterBtn: document.getElementById('closeMonitoringFooterBtn'),
+  refreshMonitoringBtn: document.getElementById('refreshMonitoringBtn'),
+  monitoringModal: document.getElementById('monitoringModal'),
+  statTotalCalls: document.getElementById('statTotalCalls'),
+  statSuccessCalls: document.getElementById('statSuccessCalls'),
+  statFailedCalls: document.getElementById('statFailedCalls'),
+  statTopProvider: document.getElementById('statTopProvider'),
+  monitoringLogsBody: document.getElementById('monitoringLogsBody')
 };
 
 // Initialisation de l'application
@@ -185,7 +195,7 @@ async function checkAuthStatus() {
         DOM.userAvatar.textContent = initial;
       }
 
-      // Gestion de la visibilité des paramètres IA (Réservé au Superadmin)
+      // Gestion de la visibilité des paramètres IA et du Monitoring (Réservé au Superadmin)
       const isSuperAdmin = Boolean(data.user.is_superadmin);
       if (DOM.openSettingsBtn) {
         if (isSuperAdmin) {
@@ -193,6 +203,15 @@ async function checkAuthStatus() {
           DOM.openSettingsBtn.title = 'Paramètres IA (Superadmin)';
         } else {
           DOM.openSettingsBtn.classList.add('hidden');
+        }
+      }
+
+      if (DOM.openMonitoringBtn) {
+        if (isSuperAdmin) {
+          DOM.openMonitoringBtn.classList.remove('hidden');
+          DOM.openMonitoringBtn.title = 'Monitoring & Historique IA (Superadmin)';
+        } else {
+          DOM.openMonitoringBtn.classList.add('hidden');
         }
       }
 
@@ -813,6 +832,21 @@ function setupEventListeners() {
   DOM.cancelSettingsBtn.onclick = closeSettings;
   DOM.saveSettingsBtn.onclick = saveSettings;
 
+  if (DOM.openMonitoringBtn) {
+    DOM.openMonitoringBtn.onclick = openMonitoring;
+  }
+  if (DOM.closeMonitoringModal) {
+    DOM.closeMonitoringModal.onclick = closeMonitoring;
+  }
+  if (DOM.closeMonitoringFooterBtn) {
+    DOM.closeMonitoringFooterBtn.onclick = closeMonitoring;
+  }
+  if (DOM.refreshMonitoringBtn) {
+    DOM.refreshMonitoringBtn.onclick = () => {
+      loadMonitoringData();
+    };
+  }
+
   document.querySelectorAll('.prompt-suggestion').forEach(btn => {
     btn.onclick = () => {
       const text = btn.querySelector('p').textContent;
@@ -822,6 +856,128 @@ function setupEventListeners() {
       handleSendMessage();
     };
   });
+}
+
+// -------------------------------------------------------------
+// ESPACE DE MONITORING DU PROXY IA (SUPERADMIN)
+// -------------------------------------------------------------
+async function openMonitoring() {
+  if (!DOM.monitoringModal) return;
+  DOM.monitoringModal.classList.remove('hidden');
+  await loadMonitoringData();
+}
+
+function closeMonitoring() {
+  if (DOM.monitoringModal) {
+    DOM.monitoringModal.classList.add('hidden');
+  }
+}
+
+async function loadMonitoringData() {
+  if (DOM.refreshMonitoringBtn) {
+    DOM.refreshMonitoringBtn.classList.add('animate-spin');
+  }
+
+  try {
+    // 1. Récupérer les statistiques globales
+    const statsRes = await fetch('/api/admin/monitoring/stats');
+    if (statsRes.ok) {
+      const stats = await statsRes.json();
+      if (DOM.statTotalCalls) DOM.statTotalCalls.textContent = stats.total_calls ?? 0;
+      if (DOM.statSuccessCalls) DOM.statSuccessCalls.textContent = stats.success_calls ?? 0;
+      if (DOM.statFailedCalls) DOM.statFailedCalls.textContent = stats.failed_calls ?? 0;
+
+      if (DOM.statTopProvider && stats.by_provider) {
+        const top = Object.entries(stats.by_provider).sort((a, b) => b[1] - a[1])[0];
+        DOM.statTopProvider.textContent = top ? `${top[0]} (${top[1]})` : 'Aucun';
+      }
+    }
+
+    // 2. Récupérer l'historique détaillé des appels
+    const logsRes = await fetch('/api/admin/monitoring/logs?limit=50');
+    if (logsRes.ok) {
+      const logs = await logsRes.json();
+      renderMonitoringLogs(logs);
+    }
+  } catch (err) {
+    console.error('Erreur chargement monitoring:', err);
+  } finally {
+    if (DOM.refreshMonitoringBtn) {
+      setTimeout(() => DOM.refreshMonitoringBtn.classList.remove('animate-spin'), 400);
+    }
+  }
+}
+
+function renderMonitoringLogs(logs) {
+  if (!DOM.monitoringLogsBody) return;
+
+  if (!logs || logs.length === 0) {
+    DOM.monitoringLogsBody.innerHTML = `
+      <tr>
+        <td colspan="5" class="py-8 text-center text-slate-400">
+          <div class="flex flex-col items-center justify-center gap-1.5">
+            <i data-lucide="inbox" class="w-6 h-6 text-slate-300 dark:text-slate-600"></i>
+            <p>Aucun appel au proxy IA enregistré pour le moment.</p>
+          </div>
+        </td>
+      </tr>
+    `;
+    lucide.createIcons();
+    return;
+  }
+
+  let html = '';
+  for (const log of logs) {
+    const d = new Date(log.created_at);
+    const dateFormatted = d.toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    const isSuccess = log.details?.status === 'success';
+    const statusBadge = isSuccess
+      ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400">✓ 200 OK</span>`
+      : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400">✕ Erreur</span>`;
+
+    const providerName = log.details?.provider || log.resource_id || 'inconnu';
+    const modelName = log.details?.model || '';
+    const userEmail = log.user_email || log.user_id || 'Utilisateur Anonyme';
+    const mode = log.details?.mode === 'direct_streaming' ? 'Streaming Direct' : 'Proxy SSE';
+
+    html += `
+      <tr class="hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition">
+        <td class="py-2.5 px-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+          ${dateFormatted}
+        </td>
+        <td class="py-2.5 px-3 font-medium text-slate-800 dark:text-slate-200 max-w-[160px] truncate" title="${escapeHtml(userEmail)}">
+          <div class="flex items-center gap-1.5 truncate">
+            <div class="w-4 h-4 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-300 flex items-center justify-center text-[9px] font-bold shrink-0">
+              ${(userEmail.charAt(0) || 'U').toUpperCase()}
+            </div>
+            <span class="truncate">${escapeHtml(userEmail)}</span>
+          </div>
+        </td>
+        <td class="py-2.5 px-3 text-slate-700 dark:text-slate-300">
+          <div class="font-semibold text-xs capitalize flex items-center gap-1">
+            <span>${escapeHtml(providerName)}</span>
+          </div>
+          ${modelName ? `<span class="font-mono text-[10px] text-slate-400">${escapeHtml(modelName)}</span>` : ''}
+        </td>
+        <td class="py-2.5 px-3">
+          ${statusBadge}
+        </td>
+        <td class="py-2.5 px-3 text-[11px] text-slate-400 whitespace-nowrap">
+          ${mode}
+        </td>
+      </tr>
+    `;
+  }
+
+  DOM.monitoringLogsBody.innerHTML = html;
+  lucide.createIcons();
 }
 
 function updateWebSearchUI() {

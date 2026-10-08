@@ -96,7 +96,10 @@
         </div>
 
         <div class="flex items-center gap-0.5">
-          <button id="openSettingsBtn" title="Paramètres IA" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-[#2a2a2a] transition">
+          <button id="openMonitoringBtn" title="Monitoring & Historique IA" class="hidden p-1.5 rounded-lg text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200/60 dark:hover:bg-[#2a2a2a] transition">
+            <i data-lucide="activity" class="w-4 h-4"></i>
+          </button>
+          <button id="openSettingsBtn" title="Paramètres IA" class="hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-[#2a2a2a] transition">
             <i data-lucide="settings" class="w-4 h-4"></i>
           </button>
           <button id="authBtn" title="Connexion / Déconnexion" class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-200/60 dark:hover:bg-[#2a2a2a] transition">
@@ -344,9 +347,107 @@
         </button>
       </div>
 
+  <!-- MODAL DE MONITORING IA (SUPERADMIN) -->
+  <div id="monitoringModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-white dark:bg-[#1f1f1f] border border-slate-200 dark:border-[#333] rounded-3xl max-w-3xl w-full overflow-hidden shadow-2xl animate-fade-in flex flex-col max-h-[90vh]">
+      
+      <!-- En-tête Modal Monitoring -->
+      <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-[#2d2d2d] flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-[#242424]/40">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+            <i data-lucide="activity" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800 dark:text-white text-sm sm:text-base">Monitoring du Proxy IA</h3>
+            <p class="text-[11px] text-slate-400">Historique des utilisateurs et des appels aux modèles LLM</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="refreshMonitoringBtn" title="Actualiser les données" class="p-2 rounded-xl text-slate-400 hover:text-blue-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#2a2a2a] transition">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
+          <button id="closeMonitoringModal" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#2a2a2a] transition">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Corps Modal Monitoring -->
+      <div class="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-5">
+        
+        <!-- Cartes Statistiques Métriques -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#282828] border border-slate-200/70 dark:border-[#383838]">
+            <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mb-1">Total Appels</p>
+            <p id="statTotalCalls" class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white">-</p>
+            <p class="text-[9px] text-slate-400 mt-0.5">Requêtes traitées</p>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40">
+            <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider mb-1">Succès</p>
+            <p id="statSuccessCalls" class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">-</p>
+            <p class="text-[9px] text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">Réponses 200 OK</p>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40">
+            <p class="text-[10px] text-rose-600 dark:text-rose-400 font-semibold uppercase tracking-wider mb-1">Échecs / Erreurs</p>
+            <p id="statFailedCalls" class="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400">-</p>
+            <p class="text-[9px] text-rose-600/70 dark:text-rose-400/70 mt-0.5">Clé ou quota dépassé</p>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40">
+            <p class="text-[10px] text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider mb-1">Modèle Principal</p>
+            <p id="statTopProvider" class="text-sm sm:text-base font-bold text-blue-600 dark:text-blue-400 truncate mt-1">Gemini</p>
+            <p class="text-[9px] text-blue-600/70 dark:text-blue-400/70 mt-0.5">Fournisseur le + sollicité</p>
+          </div>
+        </div>
+
+        <!-- Section Tableau Journal des Appels IA -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+              <i data-lucide="list" class="w-3.5 h-3.5 text-blue-500"></i>
+              Historique des requêtes en temps réel
+            </h4>
+            <span class="text-[10px] text-slate-400">Derniers 50 appels</span>
+          </div>
+
+          <div class="border border-slate-200 dark:border-[#383838] rounded-2xl overflow-hidden bg-white dark:bg-[#242424]">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 dark:bg-[#2c2c2c] border-b border-slate-200 dark:border-[#383838] text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
+                  <tr>
+                    <th class="py-2.5 px-3">Date & Heure</th>
+                    <th class="py-2.5 px-3">Utilisateur</th>
+                    <th class="py-2.5 px-3">Fournisseur / Modèle</th>
+                    <th class="py-2.5 px-3">Statut</th>
+                    <th class="py-2.5 px-3">Mode</th>
+                  </tr>
+                </thead>
+                <tbody id="monitoringLogsBody" class="divide-y divide-slate-100 dark:divide-[#333]">
+                  <tr>
+                    <td colspan="5" class="py-6 text-center text-slate-400">
+                      Chargement de l'historique...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Pied Modal Monitoring -->
+      <div class="p-3.5 border-t border-slate-100 dark:border-[#2d2d2d] bg-slate-50 dark:bg-[#1a1a1a] flex justify-end shrink-0">
+        <button id="closeMonitoringFooterBtn" class="px-4 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 rounded-xl bg-white dark:bg-[#2a2a2a] border border-slate-200 dark:border-[#333] hover:bg-slate-50 transition shadow-xs">
+          Fermer
+        </button>
+      </div>
+
     </div>
   </div>
 
-  <script src="/app.js?v=2.6"></script>
+  <script src="/app.js?v=2.7"></script>
 </body>
 </html>

@@ -435,6 +435,64 @@ app.get('/api/models/available', async (req, res) => {
   });
 });
 
+// =============================================================================
+// ENDPOINTS MONITORING IA (RÉSERVÉS AU SUPERADMIN)
+// =============================================================================
+app.get('/api/admin/monitoring/stats', async (req, res) => {
+  if (!req.session?.user?.is_superadmin) {
+    return res.status(403).json({ error: 'Accès réservé au Superadmin' });
+  }
+
+  const userAccessToken = req.session?.access_token;
+  try {
+    const ssoRes = await fetch(`${SSO_BASE_URL}/api/v1/admin/audit-logs/ai/stats`, {
+      headers: {
+        'Authorization': `Bearer ${userAccessToken}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!ssoRes.ok) {
+      return res.status(ssoRes.status).json({ error: 'Impossible de récupérer les statistiques IA' });
+    }
+
+    const data = await ssoRes.json();
+    return res.json(data);
+  } catch (err) {
+    console.error('Erreur récupération stats monitoring:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/monitoring/logs', async (req, res) => {
+  if (!req.session?.user?.is_superadmin) {
+    return res.status(403).json({ error: 'Accès réservé au Superadmin' });
+  }
+
+  const userAccessToken = req.session?.access_token;
+  const limit = req.query.limit || 50;
+  const offset = req.query.offset || 0;
+
+  try {
+    const ssoRes = await fetch(`${SSO_BASE_URL}/api/v1/admin/audit-logs/ai?limit=${limit}&offset=${offset}`, {
+      headers: {
+        'Authorization': `Bearer ${userAccessToken}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!ssoRes.ok) {
+      return res.status(ssoRes.status).json({ error: 'Impossible de récupérer le journal des appels IA' });
+    }
+
+    const data = await ssoRes.json();
+    return res.json(data);
+  } catch (err) {
+    console.error('Erreur récupération logs monitoring:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Endpoint récupération clé Gemini du coffre-fort pour appel direct client (évite le blocage IP datacenter)
 app.get('/api/gemini/credentials', async (req, res) => {
   const userAccessToken = req.session?.access_token;
