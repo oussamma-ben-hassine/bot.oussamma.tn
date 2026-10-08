@@ -630,19 +630,22 @@ async function handleSendMessage() {
         };
       }
 
-      const geminiStreamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse&key=${geminiDirectKey}`;
+      let gRes;
+      for (const targetGModel of ['gemini-2.0-flash', 'gemini-1.5-flash']) {
+        const geminiStreamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetGModel}:streamGenerateContent?alt=sse&key=${geminiDirectKey}`;
+        gRes = await fetch(geminiStreamUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(geminiPayload)
+        });
+        if (gRes.ok) break;
+      }
 
-      const gRes = await fetch(geminiStreamUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(geminiPayload)
-      });
-
-      if (!gRes.ok) {
-        const errTxt = await gRes.text().catch(() => '');
-        throw new Error(`Google API ${gRes.status}: ${errTxt}`);
+      if (!gRes || !gRes.ok) {
+        const errTxt = await gRes?.text().catch(() => '') || '';
+        throw new Error(`Google API ${gRes?.status || 500}: ${errTxt}`);
       }
 
       const reader = gRes.body.getReader();
@@ -1017,10 +1020,10 @@ function updateModelSelectorLabel() {
     if (found) {
       DOM.currentModelLabel.textContent = found.name;
     } else {
-      DOM.currentModelLabel.textContent = current === 'gemini' ? 'Gemini 3.5 Flash' : 'GPT-4o (Codex SSO)';
+      DOM.currentModelLabel.textContent = current === 'gemini' ? 'Gemini 2.0 Flash' : 'GPT-4o (Codex SSO)';
     }
   } else {
-    DOM.currentModelLabel.textContent = current === 'gemini' ? 'Gemini 3.5 Flash' : 'GPT-4o (Codex SSO)';
+    DOM.currentModelLabel.textContent = current === 'gemini' ? 'Gemini 2.0 Flash' : 'GPT-4o (Codex SSO)';
   }
 
   if (DOM.modelDropdown) {

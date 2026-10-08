@@ -371,7 +371,7 @@ app.get('/api/models/available', async (req, res) => {
             if (!configuredModels.some(m => m.id === 'gemini')) {
               configuredModels.push({
                 id: 'gemini',
-                name: 'Gemini 3.5 Flash',
+                name: 'Gemini 2.0 Flash',
                 description: 'Google AI Studio (Superadmin)',
                 badge: 'Google',
                 icon: 'zap',
@@ -419,7 +419,7 @@ app.get('/api/models/available', async (req, res) => {
       if (testGemini.ok) {
         configuredModels.push({
           id: 'gemini',
-          name: 'Gemini 3.5 Flash',
+          name: 'Gemini 2.0 Flash',
           description: 'Google AI Studio (Superadmin)',
           badge: 'Google',
           icon: 'zap',
@@ -513,7 +513,7 @@ app.get('/api/gemini/credentials', async (req, res) => {
     }
 
     const data = await ssoRes.json();
-    return res.json({ apiKey: data.token, model: 'gemini-3.8-flash' });
+    return res.json({ apiKey: data.token, model: 'gemini-2.0-flash' });
   } catch (err) {
     console.error('Erreur récupération clé Gemini:', err);
     return res.status(500).json({ error: 'Erreur lors de la récupération de la clé Gemini' });
@@ -638,7 +638,7 @@ app.post('/api/chat', async (req, res) => {
   const isGemini = String(model).toLowerCase().includes('gemini');
   const targetProvider = isGemini ? 'gemini' : 'openai_codex';
   const targetModel = isGemini
-    ? 'gemini-3.8-flash'
+    ? 'gemini-2.0-flash'
     : (/^(gpt|o\d|chatgpt)/i.test(model || '') ? model : 'gpt-4o');
 
   sendSSE('status', {
