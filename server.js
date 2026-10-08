@@ -503,9 +503,30 @@ app.post('/api/chat', async (req, res) => {
           upstreamDetail = await aiResponse.clone().text().catch(() => '');
         }
       }
+      const isGeminiIssue =
+        (aiResponse.status === 424 || aiResponse.status === 401) &&
+        /Gemini|Google/i.test(String(upstreamDetail));
       const isChatGptTokenIssue =
-        aiResponse.status === 424 ||
-        (aiResponse.status === 401 && /ChatGPT|Codex|OpenAI|abonnement/i.test(String(upstreamDetail)));
+        (aiResponse.status === 424 || aiResponse.status === 401) &&
+        !isGeminiIssue &&
+        (/ChatGPT|Codex|OpenAI|abonnement/i.test(String(upstreamDetail)) || targetProvider === 'openai_codex');
+
+      if (isGeminiIssue) {
+        console.error('Clé Google Gemini du coffre-fort invalide:', aiResponse.status, upstreamDetail);
+        const msg =
+          `### ⚠️ Clé Google Gemini invalide\n\n` +
+          `Votre connexion SSO est valide, mais la clé Google Gemini enregistrée dans votre coffre-fort n'a pas été reconnue par Google.\n\n` +
+          `> *${upstreamDetail}*\n\n` +
+          `**Conseil :** Une vraie clé API Google commence par \`AIzaSy...\` (environ 39 caractères).\n\n` +
+          `1. Rendez-vous sur [aistudio.google.com/apikey](https://aistudio.google.com/apikey).\n` +
+          `2. Cliquez sur **"Create API key"** (ou "Get API key").\n` +
+          `3. Copiez la clé (\`AIzaSy...\`) et mettez-la dans le [**Coffre-fort SSO**](https://sso-a.oussamma.tn/profile).\n\n` +
+          `Puis renvoyez votre message.`;
+        sendSSE('token', { token: msg });
+        sendSSE('done', {});
+        return res.end();
+      }
+
       if (isChatGptTokenIssue) {
         console.error('Jeton ChatGPT du coffre-fort invalide/expiré:', aiResponse.status, upstreamDetail);
         const msg =
@@ -513,7 +534,7 @@ app.post('/api/chat', async (req, res) => {
           `Votre connexion SSO est valide, mais le **jeton ChatGPT enregistré dans votre coffre-fort a expiré**.\n\n` +
           `> *${upstreamDetail}*\n\n` +
           `1. Ouvrez [chatgpt.com/api/auth/session](https://chatgpt.com/api/auth/session) (connecté à ChatGPT) et copiez la valeur de \`accessToken\`.\n` +
-          `2. Remplacez-la dans le [**Coffre-fort SSO**](https://sso-a.oussamma.tn/dashboard/vault).\n\n` +
+          `2. Remplacez-la dans le [**Coffre-fort SSO**](https://sso-a.oussamma.tn/profile).\n\n` +
           `Puis renvoyez votre message.`;
         sendSSE('token', { token: msg });
         sendSSE('done', {});
