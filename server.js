@@ -446,12 +446,22 @@ app.post('/api/chat', async (req, res) => {
     ...messages.map((m) => `${m.role === 'user' ? 'Utilisateur' : m.role === 'system' ? 'Système' : 'Assistant'} : ${m.content}`),
   ].join('\n\n');
 
-  sendSSE('status', { message: '⚡ Connexion au proxy IA Codex SSO...' });
+  const isGemini = String(model).toLowerCase().includes('gemini');
+  const targetProvider = isGemini ? 'gemini' : 'openai_codex';
+  const targetModel = isGemini
+    ? (model && model.toLowerCase().startsWith('gemini') ? model : 'gemini-2.0-flash')
+    : (/^(gpt|o\d|chatgpt)/i.test(model || '') ? model : 'gpt-4o');
+
+  sendSSE('status', {
+    message: isGemini
+      ? '⚡ Connexion au proxy IA Google Gemini SSO...'
+      : '⚡ Connexion au proxy IA Codex SSO...'
+  });
 
   let userAccessToken = req.session.access_token;
 
-  // Fonction d'appel au Proxy IA du SSO (avec support provider openai / openai_codex)
-  const callSSOAI = async (token, providerName = 'openai') => {
+  // Fonction d'appel au Proxy IA du SSO (avec support provider openai_codex / gemini / openai)
+  const callSSOAI = async (token, providerName = targetProvider) => {
     return await fetch(SSO_AI_PROMPT_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -460,21 +470,25 @@ app.post('/api/chat', async (req, res) => {
       },
       body: JSON.stringify({
         provider: providerName,
-        model: /^(gpt|o\d|chatgpt)/i.test(model || '') ? model : 'gpt-4o',
+        model: targetModel,
         prompt: fullPrompt,
       }),
     });
   };
 
   try {
-    // 1. Premier essai avec le provider 'openai' comme spécifié par le SSO
-    let aiResponse = await callSSOAI(userAccessToken, 'openai');
+    // 1. Premier essai avec le provider sélectionné
+    let aiResponse = await callSSOAI(userAccessToken, targetProvider);
 
-    // Si 400 (ex: provider non reconnu), essayer 'openai_codex'
+    // Fallbacks si non supporté
     if (aiResponse.status === 400) {
       const errCheck = await aiResponse.clone().text();
       if (errCheck.includes('non supporté') || errCheck.includes('not supported')) {
-        aiResponse = await callSSOAI(userAccessToken, 'openai_codex');
+        if (targetProvider === 'openai_codex') {
+          aiResponse = await callSSOAI(userAccessToken, 'openai');
+        } else if (targetProvider === 'gemini') {
+          aiResponse = await callSSOAI(userAccessToken, 'google');
+        }
       }
     }
 
