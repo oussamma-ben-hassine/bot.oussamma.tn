@@ -30,6 +30,62 @@ const SSO_TOKEN_ENDPOINT = `${SSO_BASE_URL}/oauth/token`;
 const SSO_USERINFO_ENDPOINT = `${SSO_BASE_URL}/oauth/userinfo`;
 const SSO_LOGOUT_ENDPOINT = `${SSO_BASE_URL}/oauth/logout`;
 const SSO_AI_PROMPT_ENDPOINT = `${SSO_BASE_URL}/api/v1/integrations/ai/prompt`;
+const SSO_AI_GATEWAY_CONFIG_ENDPOINT = `${SSO_BASE_URL}/api/v1/integrations/ai/gateway-config`;
+
+// Passerelle IA LiteLLM (ai.oussamma.tn)
+const DEFAULT_LITELLM_BASE_URL = (process.env.LITELLM_BASE_URL || 'https://ai.oussamma.tn/v1').replace(/\/+$/, '');
+const DEFAULT_LITELLM_API_KEY = process.env.LITELLM_API_KEY || 'sk-oussamma-master-gateway-2026';
+
+let cachedGatewayConfig = {
+  url: DEFAULT_LITELLM_BASE_URL,
+  key: DEFAULT_LITELLM_API_KEY,
+  defaultModel: 'gemini/gemini-3.1-flash-lite-preview',
+  lastFetched: 0,
+};
+
+async function getActiveGatewayConfig(userAccessToken) {
+  const now = Date.now();
+  if (now - cachedGatewayConfig.lastFetched < 30000 && cachedGatewayConfig.key) {
+    return cachedGatewayConfig;
+  }
+
+  if (userAccessToken) {
+    try {
+      const ssoRes = await fetch(SSO_AI_GATEWAY_CONFIG_ENDPOINT, {
+        headers: {
+          'Authorization': `Bearer ${userAccessToken}`,
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(3000),
+      });
+
+      if (ssoRes.ok) {
+        const data = await ssoRes.json();
+        if (data.gateway_url && data.api_key) {
+          let baseUrl = data.gateway_url.replace(/\/+$/, '');
+          if (!baseUrl.endsWith('/v1')) {
+            baseUrl = `${baseUrl}/v1`;
+          }
+          cachedGatewayConfig = {
+            url: baseUrl,
+            key: data.api_key,
+            defaultModel: data.default_model || 'gemini/gemini-3.1-flash-lite-preview',
+            lastFetched: now,
+          };
+          return cachedGatewayConfig;
+        }
+      }
+    } catch (err) {
+      console.warn('Impossible de récupérer la config dynamique SSO, utilisation du fallback LiteLLM:', err.message);
+    }
+  }
+
+  return {
+    url: DEFAULT_LITELLM_BASE_URL,
+    key: DEFAULT_LITELLM_API_KEY,
+    defaultModel: 'gemini/gemini-3.1-flash-lite-preview',
+  };
+}
 
 // Détection de proxy pour Coolify / Traefik
 app.set('trust proxy', true);
@@ -348,37 +404,81 @@ app.get('/api/auth/me', (req, res) => {
   });
 });
 
-// Endpoint des modèles IA réellement configurés et autorisés
+// Endpoint des modèles IA réellement disponibles sur la passerelle LiteLLM
 app.get('/api/models/available', async (req, res) => {
-  const configuredModels = [
-    {
-      id: 'gemini-2.0-flash',
-      name: 'Gemini 2.0 Flash',
-      description: 'Passerelle ai.oussamma.tn (Ultra-rapide)',
-      badge: 'ai.oussamma.tn',
-      icon: 'zap',
-      requiresKey: false,
-    },
-    {
-      id: 'gpt-4o',
-      name: 'GPT-4o',
-      description: 'Passerelle ai.oussamma.tn (OpenAI)',
-      badge: 'ai.oussamma.tn',
-      icon: 'sparkles',
-      requiresKey: false,
-    },
-    {
-      id: 'claude-3-5-sonnet',
-      name: 'Claude 3.5 Sonnet',
-      description: 'Passerelle ai.oussamma.tn (Anthropic)',
-      badge: 'ai.oussamma.tn',
-      icon: 'bot',
-      requiresKey: false,
-    },
-  ];
+  const userToken = req.session?.access_token;
+  const gwConfig = await getActiveGatewayConfig(userToken);
+
+  let models = [];
+  try {
+    const response = await fetch(`${gwConfig.url}/models`, {
+      headers: {
+        'Authorization': `Bearer ${gwConfig.key}`,
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const rawList = data.data || [];
+      models = rawList.map((m) => {
+        const id = m.id || m.model || '';
+        let icon = 'sparkles';
+        let badge = 'LiteLLM';
+
+        if (id.includes('gemini')) {
+          icon = 'zap';
+          badge = 'Google Gemini';
+        } else if (id.includes('claude')) {
+          icon = 'bot';
+          badge = 'Anthropic';
+        } else if (id.includes('gpt')) {
+          icon = 'sparkles';
+          badge = 'OpenAI';
+        } else if (id.includes('ollama') || id.includes('llama')) {
+          icon = 'cpu';
+          badge = 'Ollama / Llama';
+        } else if (id.includes('mistral')) {
+          icon = 'wind';
+          badge = 'Mistral';
+        } else if (id.includes('deepseek')) {
+          icon = 'search';
+          badge = 'DeepSeek';
+        }
+
+        const displayName = id.includes('/') ? id.split('/').pop() : id;
+
+        return {
+          id: id,
+          name: displayName.replace(/-/g, ' ').toUpperCase(),
+          description: `Passerelle IA LiteLLM (${id})`,
+          badge: badge,
+          icon: icon,
+          requiresKey: false,
+        };
+      });
+    }
+  } catch (err) {
+    console.warn('Impossible de récupérer les modèles en direct depuis LiteLLM, utilisation du modèle par défaut:', err.message);
+  }
+
+  // Si LiteLLM n'a pas encore répondu ou aucun modèle n'est retourné, proposer le modèle configuré
+  if (models.length === 0) {
+    const defId = gwConfig.defaultModel || 'gemini/gemini-3.1-flash-lite-preview';
+    models = [
+      {
+        id: defId,
+        name: defId.split('/').pop().replace(/-/g, ' ').toUpperCase(),
+        description: 'Passerelle IA unifiée LiteLLM',
+        badge: defId.includes('gemini') ? 'Google Gemini' : 'LiteLLM',
+        icon: 'zap',
+        requiresKey: false,
+      },
+    ];
+  }
 
   res.json({
-    models: configuredModels,
+    models,
     isSuperAdmin: Boolean(req.session?.user?.is_superadmin),
   });
 });
@@ -577,87 +677,64 @@ app.post('/api/chat', async (req, res) => {
     }
   }
 
-  // Construction du prompt structuré pour le proxy IA Codex
-  const fullPrompt = [
-    `INSTRUCTIONS SYSTÈME :\n${systemPrompt}${webContext}\n`,
-    ...messages.map((m) => `${m.role === 'user' ? 'Utilisateur' : m.role === 'system' ? 'Système' : 'Assistant'} : ${m.content}`),
-  ].join('\n\n');
-
-  const targetModel = model || 'gemini-2.0-flash';
+  const targetModel = model || 'gemini/gemini-3.1-flash-lite-preview';
 
   sendSSE('status', {
-    message: `⚡ Connexion à la passerelle IA ai.oussamma.tn (${targetModel})...`
+    message: `⚡ Connexion à la passerelle LiteLLM (${targetModel})...`
   });
 
-  let userAccessToken = req.session.access_token;
+  const userAccessToken = req.session?.access_token;
+  const gwConfig = await getActiveGatewayConfig(userAccessToken);
 
-  // Appel direct à la passerelle IA via le SSO unifié
-  const callSSOAI = async (token) => {
-    return await fetch(SSO_AI_PROMPT_ENDPOINT, {
+  // Préparation du payload standardisé OpenAI (compatible LiteLLM pour tous les fournisseurs)
+  let finalSystemPrompt = systemPrompt || "Tu es un assistant IA conversationnel moderne, intelligent et serviable. Réponds avec pertinence et structure tes réponses avec du beau Markdown.";
+  if (webContext) {
+    finalSystemPrompt += webContext;
+  }
+
+  const messagesPayload = [
+    {
+      role: 'system',
+      content: finalSystemPrompt,
+    },
+    ...messages
+      .filter((m) => m && m.content)
+      .map((m) => ({
+        role: m.role === 'assistant' ? 'assistant' : m.role === 'system' ? 'system' : 'user',
+        content: String(m.content),
+      })),
+  ];
+
+  try {
+    const aiResponse = await fetch(`${gwConfig.url}/chat/completions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${gwConfig.key}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        provider: 'ai.oussamma.tn',
         model: targetModel,
-        prompt: fullPrompt,
+        messages: messagesPayload,
+        temperature: 0.7,
       }),
+      signal: AbortSignal.timeout(60000),
     });
-  };
-
-  try {
-    let aiResponse = await callSSOAI(userAccessToken);
-
-    // Renouvellement automatique si le jeton SSO est expiré
-    if (aiResponse.status === 401) {
-      console.log('Jeton SSO expiré lors de l\'appel IA, tentative de refresh...');
-      sendSSE('status', { message: '🔄 Renouvellement automatique du jeton SSO...' });
-
-      const newToken = await refreshAccessToken(req);
-      if (newToken) {
-        userAccessToken = newToken;
-        aiResponse = await callSSOAI(userAccessToken);
-      }
-
-      if (aiResponse.status === 401) {
-        req.session = null;
-        let ssoDetail = '';
-        try {
-          const errJson = await aiResponse.clone().json();
-          ssoDetail = errJson.detail || JSON.stringify(errJson);
-        } catch (e) {
-          ssoDetail = await aiResponse.clone().text().catch(() => '');
-        }
-
-        const sessionExpiredMessage = 
-          `### ⚠️ Session SSO expirée\n\n` +
-          `Votre jeton de connexion a expiré.` +
-          (ssoDetail ? `\n\n> *Message du SSO : ${ssoDetail}*` : '') +
-          `\n\n<a href="https://bot.oussamma.tn/auth/login" style="display:inline-block;padding:10px 20px;margin:8px 0;background:#2563eb;color:#ffffff;border-radius:12px;font-weight:600;text-decoration:none;box-shadow:0 2px 8px rgba(37,99,235,0.3);">🔑 Cliquez ici pour vous reconnecter au SSO (1 clic)</a>\n\n`;
-
-        sendSSE('token', { token: sessionExpiredMessage });
-        sendSSE('done', {});
-        return res.end();
-      }
-    }
 
     if (!aiResponse.ok) {
       let detailMsg = '';
       try {
         const errJson = await aiResponse.json();
-        detailMsg = errJson.detail || errJson.message || '';
+        detailMsg = errJson.error?.message || errJson.detail || errJson.message || JSON.stringify(errJson);
       } catch (e) {
         detailMsg = await aiResponse.text();
       }
 
-      console.warn('Erreur passerelle IA SSO:', aiResponse.status, detailMsg);
+      console.warn('Erreur passerelle LiteLLM:', aiResponse.status, detailMsg);
       const errorMsg =
-        `### ⚠️ Erreur Passerelle IA (${aiResponse.status})\n\n` +
-        `La requête vers la passerelle **ai.oussamma.tn** a rencontré une erreur :\n\n` +
+        `### ⚠️ Erreur Passerelle LiteLLM (${aiResponse.status})\n\n` +
+        `La requête vers **ai.oussamma.tn** pour le modèle \`${targetModel}\` a retourné :\n\n` +
         `> *${detailMsg || 'Erreur inconnue'}*\n\n` +
-        `Vérifiez la configuration des modèles sur le [**Tableau de Bord IA (ai.oussamma.tn/ui)**](https://ai.oussamma.tn/ui).`;
+        `💡 Vérifiez les clés et modèles configurés sur [**ai.oussamma.tn/ui**](https://ai.oussamma.tn/ui) ou dans le panneau administrateur SSO.`;
 
       sendSSE('token', { token: errorMsg });
       sendSSE('done', {});
@@ -665,10 +742,10 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const aiData = await aiResponse.json();
-    const generatedText = aiData.response || aiData.content || aiData.text || '';
+    const generatedText = aiData.choices?.[0]?.message?.content || aiData.response || aiData.content || '';
 
     if (!generatedText) {
-      throw new Error('Réponse vide retournée par le modèle IA.');
+      throw new Error('Réponse vide retournée par le modèle LiteLLM.');
     }
 
     // 4. Streaming fluide des tokens vers le navigateur
@@ -678,7 +755,7 @@ app.post('/api/chat', async (req, res) => {
       await new Promise((resolve) => setTimeout(resolve, 15));
     }
 
-    sendSSE('done', { usage: aiData.usage });
+    sendSSE('done', { model: aiData.model || targetModel, usage: aiData.usage });
     res.end();
   } catch (error) {
     console.error('Erreur exécution IA:', error);
