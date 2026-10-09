@@ -350,84 +350,32 @@ app.get('/api/auth/me', (req, res) => {
 
 // Endpoint des modèles IA réellement configurés et autorisés
 app.get('/api/models/available', async (req, res) => {
-  const userAccessToken = req.session?.access_token;
-  const configuredModels = [];
-
-  // Interroger le SSO pour savoir quels fournisseurs sont ACTUELLEMENT configurés dans le Vault
-  if (userAccessToken) {
-    try {
-      const vaultRes = await fetch(`${SSO_BASE_URL}/api/v1/vault/providers/configured`, {
-        headers: {
-          'Authorization': `Bearer ${userAccessToken}`,
-          'Accept': 'application/json',
-        },
-      });
-
-      if (vaultRes.ok) {
-        const providers = await vaultRes.json();
-        for (const p of providers) {
-          const provName = p.provider.toLowerCase();
-          if (provName === 'gemini' || provName === 'google') {
-            if (!configuredModels.some(m => m.id === 'gemini')) {
-              configuredModels.push({
-                id: 'gemini',
-                name: 'Gemini 2.0 Flash',
-                description: 'Google AI Studio (Superadmin)',
-                badge: 'Google',
-                icon: 'zap',
-                requiresKey: false,
-              });
-            }
-          } else if (provName === 'openai_codex' || provName === 'codex' || provName === 'sso') {
-            if (!configuredModels.some(m => m.id === 'sso')) {
-              configuredModels.push({
-                id: 'sso',
-                name: 'GPT-4o (Codex SSO)',
-                description: 'Modèle OpenAI fourni par le SSO',
-                badge: 'SSO',
-                icon: 'sparkles',
-                requiresKey: false,
-              });
-            }
-          } else if (provName === 'openai') {
-            if (!configuredModels.some(m => m.id === 'openai')) {
-              configuredModels.push({
-                id: 'openai',
-                name: 'OpenAI GPT-4o',
-                description: 'Clé OpenAI configurée',
-                badge: 'OpenAI',
-                icon: 'bot',
-                requiresKey: false,
-              });
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('Erreur lors de la récupération des providers configurés:', err.message);
-    }
-  }
-
-  // Si aucun modèle n'a pu être récupéré de l'API (ex: appel direct sans provider détecté), vérifier au moins Gemini
-  if (configuredModels.length === 0) {
-    // Si aucun modèle n'est configuré dans le coffre, proposer au moins le modèle actif s'il y en a un
-    // Mais ne jamais forcer un modèle supprimé
-    try {
-      const testGemini = await fetch(`${SSO_BASE_URL}/api/v1/vault/providers/gemini/token`, {
-        headers: { 'Authorization': `Bearer ${userAccessToken}` }
-      });
-      if (testGemini.ok) {
-        configuredModels.push({
-          id: 'gemini',
-          name: 'Gemini 2.0 Flash',
-          description: 'Google AI Studio (Superadmin)',
-          badge: 'Google',
-          icon: 'zap',
-          requiresKey: false,
-        });
-      }
-    } catch (e) {}
-  }
+  const configuredModels = [
+    {
+      id: 'gemini-2.0-flash',
+      name: 'Gemini 2.0 Flash',
+      description: 'Passerelle ai.oussamma.tn (Ultra-rapide)',
+      badge: 'ai.oussamma.tn',
+      icon: 'zap',
+      requiresKey: false,
+    },
+    {
+      id: 'gpt-4o',
+      name: 'GPT-4o',
+      description: 'Passerelle ai.oussamma.tn (OpenAI)',
+      badge: 'ai.oussamma.tn',
+      icon: 'sparkles',
+      requiresKey: false,
+    },
+    {
+      id: 'claude-3-5-sonnet',
+      name: 'Claude 3.5 Sonnet',
+      description: 'Passerelle ai.oussamma.tn (Anthropic)',
+      badge: 'ai.oussamma.tn',
+      icon: 'bot',
+      requiresKey: false,
+    },
+  ];
 
   res.json({
     models: configuredModels,
@@ -635,22 +583,16 @@ app.post('/api/chat', async (req, res) => {
     ...messages.map((m) => `${m.role === 'user' ? 'Utilisateur' : m.role === 'system' ? 'Système' : 'Assistant'} : ${m.content}`),
   ].join('\n\n');
 
-  const isGemini = String(model).toLowerCase().includes('gemini');
-  const targetProvider = isGemini ? 'gemini' : 'openai_codex';
-  const targetModel = isGemini
-    ? 'gemini-2.0-flash'
-    : (/^(gpt|o\d|chatgpt)/i.test(model || '') ? model : 'gpt-4o');
+  const targetModel = model || 'gemini-2.0-flash';
 
   sendSSE('status', {
-    message: isGemini
-      ? '⚡ Connexion au proxy IA Google Gemini SSO...'
-      : '⚡ Connexion au proxy IA Codex SSO...'
+    message: `⚡ Connexion à la passerelle IA ai.oussamma.tn (${targetModel})...`
   });
 
   let userAccessToken = req.session.access_token;
 
-  // Fonction d'appel au Proxy IA du SSO (avec support provider openai_codex / gemini / openai)
-  const callSSOAI = async (token, providerName = targetProvider) => {
+  // Appel direct à la passerelle IA via le SSO unifié
+  const callSSOAI = async (token) => {
     return await fetch(SSO_AI_PROMPT_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -658,7 +600,7 @@ app.post('/api/chat', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        provider: providerName,
+        provider: 'ai.oussamma.tn',
         model: targetModel,
         prompt: fullPrompt,
       }),
@@ -666,72 +608,9 @@ app.post('/api/chat', async (req, res) => {
   };
 
   try {
-    // 1. Premier essai avec le provider sélectionné
-    let aiResponse = await callSSOAI(userAccessToken, targetProvider);
+    let aiResponse = await callSSOAI(userAccessToken);
 
-    // Fallbacks si non supporté
-    if (aiResponse.status === 400) {
-      const errCheck = await aiResponse.clone().text();
-      if (errCheck.includes('non supporté') || errCheck.includes('not supported')) {
-        if (targetProvider === 'openai_codex') {
-          aiResponse = await callSSOAI(userAccessToken, 'openai');
-        } else if (targetProvider === 'gemini') {
-          aiResponse = await callSSOAI(userAccessToken, 'google');
-        }
-      }
-    }
-
-    // 1b. Jeton ChatGPT/Codex du coffre-fort expiré (ce n'est PAS la session SSO)
-    {
-      let upstreamDetail = '';
-      if (aiResponse.status === 424 || aiResponse.status === 401) {
-        try {
-          const j = await aiResponse.clone().json();
-          upstreamDetail = j.detail || JSON.stringify(j);
-        } catch (e) {
-          upstreamDetail = await aiResponse.clone().text().catch(() => '');
-        }
-      }
-      const isGeminiIssue =
-        (aiResponse.status === 424 || aiResponse.status === 401) &&
-        /Gemini|Google/i.test(String(upstreamDetail));
-      const isChatGptTokenIssue =
-        (aiResponse.status === 424 || aiResponse.status === 401) &&
-        !isGeminiIssue &&
-        (/ChatGPT|Codex|OpenAI|abonnement/i.test(String(upstreamDetail)) || targetProvider === 'openai_codex');
-
-      if (isGeminiIssue) {
-        console.error('Clé Google Gemini du coffre-fort invalide:', aiResponse.status, upstreamDetail);
-        const msg =
-          `### ⚠️ Clé Google Gemini invalide\n\n` +
-          `Votre connexion SSO est valide, mais la clé Google Gemini enregistrée dans votre coffre-fort n'a pas été reconnue par Google.\n\n` +
-          `> *${upstreamDetail}*\n\n` +
-          `**Conseil :** Une vraie clé API Google commence par \`AIzaSy...\` (environ 39 caractères).\n\n` +
-          `1. Rendez-vous sur [aistudio.google.com/apikey](https://aistudio.google.com/apikey).\n` +
-          `2. Cliquez sur **"Create API key"** (ou "Get API key").\n` +
-          `3. Copiez la clé (\`AIzaSy...\`) et mettez-la dans le [**Coffre-fort SSO**](https://sso-a.oussamma.tn/profile).\n\n` +
-          `Puis renvoyez votre message.`;
-        sendSSE('token', { token: msg });
-        sendSSE('done', {});
-        return res.end();
-      }
-
-      if (isChatGptTokenIssue) {
-        console.error('Jeton ChatGPT du coffre-fort invalide/expiré:', aiResponse.status, upstreamDetail);
-        const msg =
-          `### ⚠️ Jeton ChatGPT expiré\n\n` +
-          `Votre connexion SSO est valide, mais le **jeton ChatGPT enregistré dans votre coffre-fort a expiré**.\n\n` +
-          `> *${upstreamDetail}*\n\n` +
-          `1. Ouvrez [chatgpt.com/api/auth/session](https://chatgpt.com/api/auth/session) (connecté à ChatGPT) et copiez la valeur de \`accessToken\`.\n` +
-          `2. Remplacez-la dans le [**Coffre-fort SSO**](https://sso-a.oussamma.tn/profile).\n\n` +
-          `Puis renvoyez votre message.`;
-        sendSSE('token', { token: msg });
-        sendSSE('done', {});
-        return res.end();
-      }
-    }
-
-    // 2. Gestion du renouvellement automatique de token (si 401 Unauthorized)
+    // Renouvellement automatique si le jeton SSO est expiré
     if (aiResponse.status === 401) {
       console.log('Jeton SSO expiré lors de l\'appel IA, tentative de refresh...');
       sendSSE('status', { message: '🔄 Renouvellement automatique du jeton SSO...' });
@@ -739,7 +618,7 @@ app.post('/api/chat', async (req, res) => {
       const newToken = await refreshAccessToken(req);
       if (newToken) {
         userAccessToken = newToken;
-        aiResponse = await callSSOAI(userAccessToken, 'openai');
+        aiResponse = await callSSOAI(userAccessToken);
       }
 
       if (aiResponse.status === 401) {
@@ -751,14 +630,12 @@ app.post('/api/chat', async (req, res) => {
         } catch (e) {
           ssoDetail = await aiResponse.clone().text().catch(() => '');
         }
-        console.error('SSO 401 detail:', ssoDetail);
 
         const sessionExpiredMessage = 
           `### ⚠️ Session SSO expirée\n\n` +
-          `Votre jeton de connexion a expiré suite à la mise à jour du SSO.` +
+          `Votre jeton de connexion a expiré.` +
           (ssoDetail ? `\n\n> *Message du SSO : ${ssoDetail}*` : '') +
-          `\n\n<a href="https://bot.oussamma.tn/auth/login" style="display:inline-block;padding:10px 20px;margin:8px 0;background:#2563eb;color:#ffffff;border-radius:12px;font-weight:600;text-decoration:none;box-shadow:0 2px 8px rgba(37,99,235,0.3);">🔑 Cliquez ici pour vous reconnecter au SSO (1 clic)</a>\n\n` +
-          `Une fois reconnecté, vous pourrez reprendre vos discussions avec l'IA directement !`;
+          `\n\n<a href="https://bot.oussamma.tn/auth/login" style="display:inline-block;padding:10px 20px;margin:8px 0;background:#2563eb;color:#ffffff;border-radius:12px;font-weight:600;text-decoration:none;box-shadow:0 2px 8px rgba(37,99,235,0.3);">🔑 Cliquez ici pour vous reconnecter au SSO (1 clic)</a>\n\n`;
 
         sendSSE('token', { token: sessionExpiredMessage });
         sendSSE('done', {});
@@ -766,7 +643,6 @@ app.post('/api/chat', async (req, res) => {
       }
     }
 
-    // 3. Gestion conviviale des erreurs 400, 404, 500 (Vault / Clé manquante)
     if (!aiResponse.ok) {
       let detailMsg = '';
       try {
@@ -776,23 +652,16 @@ app.post('/api/chat', async (req, res) => {
         detailMsg = await aiResponse.text();
       }
 
-      console.warn('Réponse d\'erreur du proxy IA SSO:', aiResponse.status, detailMsg);
+      console.warn('Erreur passerelle IA SSO:', aiResponse.status, detailMsg);
+      const errorMsg =
+        `### ⚠️ Erreur Passerelle IA (${aiResponse.status})\n\n` +
+        `La requête vers la passerelle **ai.oussamma.tn** a rencontré une erreur :\n\n` +
+        `> *${detailMsg || 'Erreur inconnue'}*\n\n` +
+        `Vérifiez la configuration des modèles sur le [**Tableau de Bord IA (ai.oussamma.tn/ui)**](https://ai.oussamma.tn/ui).`;
 
-      if (aiResponse.status === 400 || aiResponse.status === 404 || aiResponse.status === 500) {
-        const friendlyMessage = 
-          `### ⚠️ Configuration de l'accès IA requise\n\n` +
-          `Aucune clé ou session active ChatGPT n'est actuellement liée à votre compte SSO.\n\n` +
-          `${detailMsg ? `> *Détail : ${detailMsg}*\n\n` : ''}` +
-          `Pour activer vos discussions avec l'IA, connectez simplement votre compte :\n\n` +
-          `👉 [**Accéder au Coffre-fort SSO (sso-a.oussamma.tn/dashboard/vault)**](https://sso-a.oussamma.tn/dashboard/vault)\n\n` +
-          `Une fois votre session ou clé ajoutée, vous pourrez discuter directement ici !`;
-
-        sendSSE('token', { token: friendlyMessage });
-        sendSSE('done', {});
-        return res.end();
-      }
-
-      throw new Error(`Le proxy IA SSO a répondu avec le statut ${aiResponse.status}${detailMsg ? ` : ${typeof detailMsg === 'string' ? detailMsg : JSON.stringify(detailMsg)}` : ''}`);
+      sendSSE('token', { token: errorMsg });
+      sendSSE('done', {});
+      return res.end();
     }
 
     const aiData = await aiResponse.json();
