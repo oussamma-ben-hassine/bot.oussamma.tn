@@ -13,7 +13,7 @@ const state = {
   currentTheme: 'light',
   user: null,
   config: {
-    provider: 'sso',
+    provider: 'gpt-4o',
     ssoEndpoint: 'https://sso-a.oussamma.tn/api/v1/integrations/ai/prompt',
     model: 'gpt-4o',
     apiKey: '',
@@ -149,6 +149,9 @@ function loadConfig() {
     } catch (e) {
       console.error('Erreur chargement config:', e);
     }
+  }
+  if (!state.config.provider || state.config.provider === 'sso') {
+    state.config.provider = 'gpt-4o';
   }
   state.webSearchEnabled = state.config.defaultWebSearch || false;
   updateWebSearchUI();
