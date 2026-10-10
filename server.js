@@ -715,7 +715,7 @@ app.post('/api/chat', async (req, res) => {
       body: JSON.stringify({
         model: targetModel,
         messages: messagesPayload,
-        temperature: 0.7,
+        drop_params: true,
       }),
       signal: AbortSignal.timeout(60000),
     });
