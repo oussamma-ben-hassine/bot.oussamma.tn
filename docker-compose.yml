@@ -11,14 +11,15 @@ services:
       - PORT=3000
       - NODE_ENV=production
       - APP_URL=https://bot.oussamma.tn
-      - SSO_BASE_URL=https://sso-a.oussamma.tn
-      - SSO_CLIENT_ID=client_bbe0d965db17d39880d411af
-      - SSO_CLIENT_SECRET=sec_eLi20e99kRC-hkfqC6LsxV-d4dbYzO2pyCB5g9sCIEA
-      - SSO_REDIRECT_URI=https://bot.oussamma.tn/auth/callback
+      - SSO_BASE_URL=${SSO_BASE_URL:-https://sso-a.oussamma.tn}
+      - OIDC_ISSUER=${OIDC_ISSUER:-https://sso.oussamma.tn/realms/platform}
+      - SSO_CLIENT_ID=${SSO_CLIENT_ID:-client_bbe0d965db17d39880d411af}
+      - SSO_CLIENT_SECRET=${SSO_CLIENT_SECRET:?Set SSO_CLIENT_SECRET in Coolify}
+      - SSO_REDIRECT_URI=${SSO_REDIRECT_URI:-https://bot.oussamma.tn/auth/callback}
       - SSO_SCOPES=openid profile email
       - SSO_AI_ENDPOINT=https://sso-a.oussamma.tn/api/ai
       - SSO_AI_DEFAULT_MODEL=default-model
-      - SESSION_SECRET=bot-oussamma-super-secret-key-2026-prod
+      - SESSION_SECRET=${SESSION_SECRET:?Set SESSION_SECRET in Coolify}
     networks:
       - bot-network
 
