@@ -19,16 +19,18 @@ const APP_URL = (process.env.APP_URL || 'https://bot.oussamma.tn').replace(/\/$/
 // CONFIGURATION DU FOURNISSEUR SSO
 // =============================================================================
 const SSO_BASE_URL = (process.env.SSO_BASE_URL || 'https://sso-a.oussamma.tn').replace(/\/$/, '');
+const OIDC_ISSUER = (process.env.OIDC_ISSUER || 'https://sso.oussamma.tn/realms/platform').replace(/\/$/, '');
 const SSO_CLIENT_ID = process.env.SSO_CLIENT_ID || 'client_bbe0d965db17d39880d411af';
-const SSO_CLIENT_SECRET = process.env.SSO_CLIENT_SECRET || 'sec_eLi20e99kRC-hkfqC6LsxV-d4dbYzO2pyCB5g9sCIEA';
+const SSO_CLIENT_SECRET = process.env.SSO_CLIENT_SECRET;
+if (!SSO_CLIENT_SECRET) throw new Error('SSO_CLIENT_SECRET doit être configuré.');
 const SSO_REDIRECT_URI = process.env.SSO_REDIRECT_URI || `${APP_URL}/auth/callback`;
 const SSO_SCOPES = process.env.SSO_SCOPES || 'openid profile email';
 
 // Endpoints SSO
-const SSO_AUTH_ENDPOINT = `${SSO_BASE_URL}/oauth/authorize`;
-const SSO_TOKEN_ENDPOINT = `${SSO_BASE_URL}/oauth/token`;
-const SSO_USERINFO_ENDPOINT = `${SSO_BASE_URL}/oauth/userinfo`;
-const SSO_LOGOUT_ENDPOINT = `${SSO_BASE_URL}/oauth/logout`;
+const SSO_AUTH_ENDPOINT = `${OIDC_ISSUER}/protocol/openid-connect/auth`;
+const SSO_TOKEN_ENDPOINT = `${OIDC_ISSUER}/protocol/openid-connect/token`;
+const SSO_USERINFO_ENDPOINT = `${OIDC_ISSUER}/protocol/openid-connect/userinfo`;
+const SSO_LOGOUT_ENDPOINT = `${OIDC_ISSUER}/protocol/openid-connect/logout`;
 const SSO_AI_PROMPT_ENDPOINT = `${SSO_BASE_URL}/api/v1/integrations/ai/prompt`;
 const SSO_AI_GATEWAY_CONFIG_ENDPOINT = `${SSO_BASE_URL}/api/v1/integrations/ai/gateway-config`;
 
@@ -117,7 +119,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
     name: 'bot_oussamma_session',
-    keys: [process.env.SESSION_SECRET || 'super-secret-bot-oussamma-key-2026-prod'],
+    keys: [process.env.SESSION_SECRET || (() => { throw new Error('SESSION_SECRET doit être configuré.'); })()],
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 jours
     secure: false,
     sameSite: 'lax',
@@ -128,7 +130,8 @@ app.use(
 // =============================================================================
 // HELPER PKCE & STATE CRYPTOGRAPHIQUE AUTO-VÉRIFIABLE (HMAC)
 // =============================================================================
-const SECRET_SIGN_KEY = process.env.SESSION_SECRET || 'bot-oussamma-super-secret-key-2026-prod';
+const SECRET_SIGN_KEY = process.env.SESSION_SECRET;
+if (!SECRET_SIGN_KEY) throw new Error('SESSION_SECRET doit être configuré.');
 
 function generateOidcStateAndPKCE() {
   const nonce = crypto.randomBytes(16).toString('hex');
@@ -309,8 +312,10 @@ app.get('/auth/callback', async (req, res) => {
 // C. Route de déconnexion (/auth/logout)
 app.get('/auth/logout', (req, res) => {
   req.session = null;
-  const postLogoutRedirect = encodeURIComponent(APP_URL);
-  res.redirect(`${SSO_LOGOUT_ENDPOINT}?post_logout_redirect_uri=${postLogoutRedirect}`);
+  const logoutUrl = new URL(SSO_LOGOUT_ENDPOINT);
+  logoutUrl.searchParams.set('client_id', SSO_CLIENT_ID);
+  logoutUrl.searchParams.set('post_logout_redirect_uri', `${APP_URL}/`);
+  res.redirect(logoutUrl.toString());
 });
 
 // =============================================================================
